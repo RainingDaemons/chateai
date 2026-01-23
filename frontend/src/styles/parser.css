@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+.markdown-item hr{
+    @apply my-2;
+}
+
+/* Titulos */
+.markdown-item h1{
+    @apply my-2 text-2xl text-indigo-300;
+}
+
+.markdown-item h2{
+    @apply my-2 text-xl text-indigo-300/90;
+}
+
+.markdown-item h3{
+    @apply my-1 text-lg text-indigo-300/80;
+}
+
+/* Listas */
+.markdown-item ol li{
+    @apply mt-2;
+}
+
+.markdown-item ol li strong{
+    @apply text-base text-blue-300;
+}
+
+.markdown-item ol li ul li{
+    @apply mb-2;
+}
+
+/* Quotes */
+.markdown-item blockquote p {
+    @apply ml-2;
+}
+
+/* Código */
+.markdown-item pre {
+    @apply p-2 my-2 border border-white/40 rounded-md bg-slate-700;
+}
+
+.markdown-item pre code {
+    @apply font-mono text-white/80;
+}

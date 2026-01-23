@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+body {
+    @apply bg-slate-950;
+}
+
+/* Conversations */
+#conversations {
+    @apply bg-slate-900 text-white;
+}
+
+#conversations #buttons div, #conversations #chat-list div{
+    @apply hover:bg-slate-700;
+}
+
+#conversations #chat-list div.active{
+    @apply bg-slate-800 hover:bg-slate-700;
+}
+
+/* Chat */
+#chat #message-send{
+    @apply bg-slate-800;
+}
+
+#chat #message-send button{
+    @apply bg-white;
+}
+
+#chat #message-send button{
+    @apply bg-white;
+}
+
+#chat #chat-list .msg-user{
+    @apply bg-blue-600 text-white;
+}
+
+#chat #chat-list .msg-llm{
+    @apply bg-gray-600 text-white;
+}
+
+/* Options */
+#options {
+    @apply border-white/40 bg-slate-800 text-stone-100;
+}
+
+#options .option-item{
+    @apply hover:bg-slate-700;
+}
+
+#options .option-item.delete{
+    @apply text-red-400;
+}
+
+/* Search */
+#search {
+    @apply bg-slate-900 border-white/40;
+}
+
+#search #search-body{
+    @apply bg-slate-800 border-white/40;
+}
+
+#search #search-body input{
+    @apply bg-slate-800;
+}
+
+#search #search-body .close-btn{
+    @apply cursor-pointer text-neutral-400 hover:text-white;
+}
+
+#search #results .res-item{
+    @apply hover:bg-slate-700;
+}
+
+/* Credits */
+#logo svg {
+    @apply p-2 cursor-pointer rounded-md hover:bg-slate-700;
+}
+
+#credits {
+    @apply text-white bg-slate-900 border-white/40;
+}
+
+#credits #credits-title {
+    @apply border-b border-white/40;
+}
+
+#credits #credits-body {
+    @apply text-neutral-400;
+}
+
+#credits .close-btn{
+    @apply cursor-pointer text-neutral-400 hover:text-white;
+}

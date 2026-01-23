@@ -1,0 +1,13 @@
+{
+  "name": "ChateAI",
+  "outputfilename": "chateai",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm run build",
+  "frontend:dev:watcher": "pnpm dev",
+  "frontend:dev:serverUrl": "auto",
+  "assetdir": "./frontend/dist",
+  "author": {
+    "name": "Felipe Gutiérrez",
+    "email": "fgutierrezcarilao@gmail.com"
+  }
+}
