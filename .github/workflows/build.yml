@@ -1,0 +1,169 @@
+name: Release Build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    name: Build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # LINUX
+          - name: "Linux"
+            os: ubuntu-latest
+            platform: linux/amd64
+            out: chateai_linux_amd64
+            extra_args: "-obfuscated -tags webkit2_41"
+            frontend_dir: "./frontend"
+
+          # WINDOWS
+          - name: "Windows"
+            os: windows-latest
+            platform: windows/amd64
+            out: chateai_win_amd64.exe
+            extra_args: "-obfuscated"
+            frontend_dir: "./frontend"
+
+          # MACOS
+          - name: "macOS"
+            os: macos-latest
+            platform: darwin/universal
+            out: chateai_mac_universal
+            extra_args: "-obfuscated"
+            frontend_dir: "./frontend"
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      WAILS_NPM_COMMAND: pnpm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          check-latest: true
+
+      # Instalar garble
+      - name: Install garble
+        shell: bash
+        run: |
+          set -e
+          go install mvdan.cc/garble@latest
+          echo "${HOME}/go/bin" >> $GITHUB_PATH
+      
+      # Instalar pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      # Setear node con caché de pnpm
+      - name: Setup Node (with pnpm cache)
+        if: ${{ hashFiles(format('{0}/pnpm-lock.yaml', matrix.frontend_dir)) != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: ${{ matrix.frontend_dir }}/pnpm-lock.yaml
+      
+      # Alt: Setear node sin caché
+      - name: Fallback - Setup Node (no cache)
+        if: ${{ hashFiles(format('{0}/pnpm-lock.yaml', matrix.frontend_dir)) == '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Dependencias Linux para Wails y Webkit
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config \
+            libgtk-3-dev libglib2.0-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev nsis
+
+      - name: Ensure Xcode (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          xcode-select -p || sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
+      - name: Install Wails CLI
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          echo "${HOME}/go/bin" >> $GITHUB_PATH
+          wails doctor -n || true
+
+      - name: Install frontend dependencies
+        shell: bash
+        run: |
+          set -e
+          if [ -f "${{ matrix.frontend_dir }}/package.json" ]; then
+            pushd "${{ matrix.frontend_dir }}"
+            pnpm install --frozen-lockfile
+            popd
+          else
+            echo "No package.json en ${{ matrix.frontend_dir }}, saltando instalación frontend"
+          fi
+
+      - name: Build (${{ matrix.platform }})
+        shell: bash
+        run: |
+          set -e
+          wails build --platform "${{ matrix.platform }}" -o "${{ matrix.out }}" ${{ matrix.extra_args }}
+
+          # Linux: asignar permisos de ejecución
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            chmod +x "build/bin/${{ matrix.out }}"
+          fi
+
+          # macOS: extraer el ejecutable interno del bundle .app y copiarlo a build/bin
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            APP_BUNDLE=$(ls -d build/bin/*.app | head -n1 || true)
+            if [[ -z "$APP_BUNDLE" ]]; then
+              echo "No se encontró ningún .app en build/bin"; exit 1
+            fi
+            echo "Bundle detectado: $APP_BUNDLE"
+
+            # Leer nombre de ejecutable desde Info.plist o listar Contents/MacOS
+            EXEC_NAME=$(defaults read "$APP_BUNDLE/Contents/Info" CFBundleExecutable 2>/dev/null || true)
+            if [[ -z "$EXEC_NAME" ]]; then
+              EXEC_NAME=$(basename "$(ls "$APP_BUNDLE/Contents/MacOS/"* | head -n1)")
+            fi
+
+            EXEC_SRC="$APP_BUNDLE/Contents/MacOS/$EXEC_NAME"
+            EXEC_DST="build/bin/chateai_mac_universal"
+
+            if [[ ! -f "$EXEC_SRC" ]]; then
+              echo "No se encontró ejecutable en $EXEC_SRC"; ls -la "$APP_BUNDLE/Contents/MacOS"; exit 1
+            fi
+
+            cp "$EXEC_SRC" "$EXEC_DST"
+            chmod +x "$EXEC_DST"
+            echo "Ejecutable copiado a: $EXEC_DST"
+          fi
+
+      - name: Upload asset to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            build/bin/${{ matrix.out }}
+            build/bin/*.app
+        continue-on-error: true

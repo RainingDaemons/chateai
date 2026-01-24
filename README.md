@@ -5,7 +5,7 @@
 
   <p>Multiplatform desktop interface for visualizing, managing and interacting with LLMs.</p>
 
-  <img src="./chateai.gif" alt="ChateAI preview" width="800" />
+  <img src="./build/chateai.gif" alt="ChateAI preview" width="800" />
 </div>
 
 # Installation
@@ -22,16 +22,20 @@ wails build --platform windows/amd64 -o chateai_win_amd64.exe
 # for linux machines
 wails build --platform linux/amd64 -o chateai_linux_amd64 -tags webkit2_41
 # for macos machines
-wails build --platform darwin/universal -o chateai_mac.app
+wails build --platform darwin/universal -o chateai_mac_universal.app
 ```
 
 # Requirements
 
 - [Git](https://git-scm.com/) installed and accessible in your terminal
-- [Go 1.21+](https://go.dev/dl/)
+- [Go 1.25+](https://go.dev/dl/)
 - [Wails](https://wails.io/docs/gettingstarted/installation) installed and accesible in your terminal
 - [Node.js](https://nodejs.org/en/download/)
 - [PNPM](https://pnpm.io/installation) recommended
+
+Note:
+- [SolidJS](https://docs.solidjs.com/), [TailwindCSS](https://tailwindcss.com/) and [Kobalte](https://kobalte.dev/docs/core/overview/introduction/) are used for frontend interfaces.
+- [Garble](https://github.com/burrowers/garble) needed to generate obfuscated builds for Wails.
 
 # Feature Support
 
