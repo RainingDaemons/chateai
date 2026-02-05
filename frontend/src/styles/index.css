@@ -1,50 +1,118 @@
 @import "tailwindcss";
 
+/* Theme Variables - Light (Warm tones) */
+:root {
+    --bg-primary: #fffbf5;
+    --bg-sidebar: #faf5ef;
+    --bg-input: #f5efe6;
+    --bg-hover: #ebe5dc;
+    --bg-active: #d9d0c3;
+    --border-color: #d4c9ba;
+    --text-primary: #3d3229;
+    --text-secondary: #7a6f63;
+    --scrollbar: #c9bfb0;
+    --msg-user-bg: #c2956e;
+    --msg-user-text: #ffffff;
+    --msg-llm-bg: #f0e8dd;
+    --msg-llm-text: #3d3229;
+}
+
+.dark {
+    --bg-primary: #0E0E0E;
+    --bg-sidebar: #0a0a0a;
+    --bg-input: #1a1a1a;
+    --bg-hover: #1a1a1a;
+    --bg-active: #252525;
+    --border-color: #27272a;
+    --text-primary: #e4e4e7;
+    --text-secondary: #71717a;
+    --scrollbar: #2a2a2a;
+    --msg-user-bg: #2563eb;
+    --msg-user-text: #ffffff;
+    --msg-llm-bg: #4b5563;
+    --msg-llm-text: #ffffff;
+}
+
 body {
-    @apply bg-slate-950;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
 
 /* Conversations */
 #conversations {
-    @apply bg-slate-900 text-white;
+    background-color: var(--bg-sidebar);
+    color: var(--text-primary);
+}
+
+#conversations svg {
+    color: var(--text-primary);
 }
 
 #conversations #buttons div, #conversations #chat-list div{
-    @apply hover:bg-slate-700;
+    &:hover {
+        background-color: var(--bg-hover);
+    }
 }
 
 #conversations #chat-list div.active{
-    @apply bg-slate-800 hover:bg-slate-700;
+    background-color: var(--bg-active);
+    &:hover {
+        background-color: var(--bg-hover);
+    }
 }
 
 /* Chat */
+#chat {
+    color: var(--text-primary);
+}
+
+#chat h1 {
+    color: var(--text-primary);
+}
+
 #chat #message-send{
-    @apply bg-slate-800;
+    background-color: var(--bg-input);
+}
+
+#chat #message-send input {
+    background-color: transparent;
+    color: var(--text-primary);
+}
+
+#chat #message-send input::placeholder {
+    color: var(--text-secondary);
 }
 
 #chat #message-send button{
-    @apply bg-white;
+    background-color: var(--msg-user-bg);
+    color: var(--msg-user-text);
 }
 
-#chat #message-send button{
-    @apply bg-white;
+#chat #message-send svg {
+    color: var(--text-primary);
 }
 
 #chat #chat-list .msg-user{
-    @apply bg-blue-600 text-white;
+    background-color: var(--msg-user-bg);
+    color: var(--msg-user-text);
 }
 
 #chat #chat-list .msg-llm{
-    @apply bg-gray-600 text-white;
+    background-color: var(--msg-llm-bg);
+    color: var(--msg-llm-text);
 }
 
 /* Options */
 #options {
-    @apply border-white/40 bg-slate-800 text-stone-100;
+    border-color: var(--border-color);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
 }
 
 #options .option-item{
-    @apply hover:bg-slate-700;
+    &:hover {
+        background-color: var(--bg-hover);
+    }
 }
 
 #options .option-item.delete{
@@ -53,42 +121,78 @@ body {
 
 /* Search */
 #search {
-    @apply bg-slate-900 border-white/40;
+    background-color: var(--bg-sidebar);
+    border-color: var(--border-color);
 }
 
 #search #search-body{
-    @apply bg-slate-800 border-white/40;
+    background-color: var(--bg-input);
+    border-color: var(--border-color);
 }
 
 #search #search-body input{
-    @apply bg-slate-800;
+    background-color: var(--bg-input);
+    color: var(--text-primary);
 }
 
 #search #search-body .close-btn{
-    @apply cursor-pointer text-neutral-400 hover:text-white;
+    @apply cursor-pointer;
+    color: var(--text-secondary);
+    &:hover {
+        color: var(--text-primary);
+    }
 }
 
 #search #results .res-item{
-    @apply hover:bg-slate-700;
+    &:hover {
+        background-color: var(--bg-hover);
+    }
 }
 
 /* Credits */
 #logo svg {
-    @apply p-2 cursor-pointer rounded-md hover:bg-slate-700;
+    @apply p-2 cursor-pointer rounded-md;
+    &:hover {
+        background-color: var(--bg-hover);
+    }
 }
 
 #credits {
-    @apply text-white bg-slate-900 border-white/40;
+    color: var(--text-primary);
+    background-color: var(--bg-sidebar);
+    border-color: var(--border-color);
 }
 
 #credits #credits-title {
-    @apply border-b border-white/40;
+    border-bottom: 1px solid var(--border-color);
 }
 
 #credits #credits-body {
-    @apply text-neutral-400;
+    color: var(--text-secondary);
 }
 
 #credits .close-btn{
-    @apply cursor-pointer text-neutral-400 hover:text-white;
+    @apply cursor-pointer;
+    color: var(--text-secondary);
+    &:hover {
+        color: var(--text-primary);
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }

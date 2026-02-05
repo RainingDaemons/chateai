@@ -1,20 +1,43 @@
 @import "tailwindcss";
 
+/* Parser Theme Variables - Light (Warm tones) */
+:root {
+    --md-heading: #8b5a2b;
+    --md-emphasis: #a0522d;
+    --md-code-bg: #f5efe6;
+    --md-code-text: #3d3229;
+    --md-code-border: #d4c9ba;
+}
+
+.dark {
+    --md-heading: #a5b4fc;
+    --md-emphasis: #93c5fd;
+    --md-code-bg: #334155;
+    --md-code-text: rgba(255, 255, 255, 0.8);
+    --md-code-border: rgba(255, 255, 255, 0.4);
+}
+
 .markdown-item hr{
     @apply my-2;
+    border-color: var(--border-color);
 }
 
 /* Titulos */
 .markdown-item h1{
-    @apply my-2 text-2xl text-indigo-300;
+    @apply my-2 text-2xl;
+    color: var(--md-heading);
 }
 
 .markdown-item h2{
-    @apply my-2 text-xl text-indigo-300/90;
+    @apply my-2 text-xl;
+    color: var(--md-heading);
+    opacity: 0.9;
 }
 
 .markdown-item h3{
-    @apply my-1 text-lg text-indigo-300/80;
+    @apply my-1 text-lg;
+    color: var(--md-heading);
+    opacity: 0.8;
 }
 
 /* Listas */
@@ -23,7 +46,8 @@
 }
 
 .markdown-item ol li strong{
-    @apply text-base text-blue-300;
+    @apply text-base;
+    color: var(--md-emphasis);
 }
 
 .markdown-item ol li ul li{
@@ -37,9 +61,12 @@
 
 /* Código */
 .markdown-item pre {
-    @apply p-2 my-2 border border-white/40 rounded-md bg-slate-700;
+    @apply p-2 my-2 rounded-md;
+    background-color: var(--md-code-bg);
+    border: 1px solid var(--md-code-border);
 }
 
 .markdown-item pre code {
-    @apply font-mono text-white/80;
+    @apply font-mono;
+    color: var(--md-code-text);
 }

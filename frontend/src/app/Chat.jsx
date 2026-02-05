@@ -180,8 +180,8 @@ const Chat = () => {
         <>
             {chat().length < 1 ? (
                 <div class='w-full h-full flex flex-col justify-center items-center'>
-                    <h1 class="mb-6 text-center text-2xl font-semibold text-white">¿Por dónde empezamos?</h1>
-                    <div 
+                    <h1 class="mb-6 text-center text-2xl font-semibold">¿Por dónde empezamos?</h1>
+                    <div
                         class="mx-auto my-2 px-4 py-2 w-200 max-w-2xl sm:w-full flex border border-transparent rounded-full"
                         id='message-send'
                     >
@@ -191,17 +191,17 @@ const Chat = () => {
                             onKeyDown={(e) => handleKeyboard(e)}
                             type="text"
                             placeholder="Pregunta lo que quieras"
-                            class="px-2 mr-4 grow outline-none text-white"
+                            class="px-2 mr-4 grow outline-none"
                         />
                         <div>
                             {isLoading() ? (
-                                <LoadingIcon class="w-10 h-10 text-white" />
+                                <LoadingIcon class="w-10 h-10" />
                             ) : (
                                 <button
                                     onClick={handleSubmit}
                                     class="w-10 h-10 flex items-center justify-center rounded-full"
                                 >
-                                    <SendIcon class="w-6 h-6 text-black" />
+                                    <SendIcon class="w-6 h-6" />
                                 </button>
                             )}
                         </div>
@@ -237,7 +237,7 @@ const Chat = () => {
                         </div>
                         <div class="absolute inset-x-0 bottom-0 z-50">
                             <div class="mx-auto max-w-2xl px-10 pb-[env(safe-area-inset-bottom)]">
-                                <div 
+                                <div
                                     class="my-2 px-4 py-2 w-full flex rounded-full"
                                     id='message-send'
                                 >
@@ -247,17 +247,17 @@ const Chat = () => {
                                         onKeyDown={(e) => handleKeyboard(e)}
                                         type="text"
                                         placeholder="Pregunta lo que quieras"
-                                        class="px-2 mr-4 grow outline-none text-white"
+                                        class="px-2 mr-4 grow outline-none"
                                     />
                                     <div>
                                         {isLoading() ? (
-                                            <LoadingIcon class="w-10 h-10 text-white" />
+                                            <LoadingIcon class="w-10 h-10" />
                                         ) : (
                                             <button
                                                 onClick={handleSubmit}
                                                 class="w-10 h-10 flex items-center justify-center rounded-full"
                                             >
-                                                <SendIcon class="w-6 h-6 text-black" />
+                                                <SendIcon class="w-6 h-6" />
                                             </button>
                                         )}
                                     </div>

@@ -10,8 +10,23 @@ const Provider = (props) => {
         try {
             const s = sessionStorage.getItem('convID');
             return s ? JSON.parse(s) : null;
-        } catch { 
-            return null; 
+        } catch {
+            return null;
+        }
+    })();
+
+    // Inicializar tema
+    const initTheme = (() => {
+        try {
+            const saved = localStorage.getItem('theme');
+            if (saved) return saved;
+            // Detectar preferencia del sistema
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            }
+            return 'light';
+        } catch {
+            return 'dark';
         }
     })();
 
@@ -19,6 +34,22 @@ const Provider = (props) => {
     const [chat, setChat] = createSignal([]);
     const [convs, setConvs] = createSignal([]);
     const [msgs, setMsgs] = createSignal([]);
+    const [theme, setTheme] = createSignal(initTheme);
+
+    // Función para alternar tema
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
+
+    // Aplicar clase de tema al documento
+    createEffect(() => {
+        const currentTheme = theme();
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(currentTheme);
+        try {
+            localStorage.setItem('theme', currentTheme);
+        } catch { }
+    });
 
     // Función para cargar listado de conversaciones desde la BD
     const updateConvs = async () => {
@@ -63,11 +94,12 @@ const Provider = (props) => {
         } catch { }
     });
 
-    const store = { 
-        convID, setConvID, 
-        chat, setChat, clearChat, 
+    const store = {
+        convID, setConvID,
+        chat, setChat, clearChat,
         convs, updateConvs,
-        msgs, updateMsgs
+        msgs, updateMsgs,
+        theme, toggleTheme
     };
 
     return (

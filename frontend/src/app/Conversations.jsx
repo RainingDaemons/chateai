@@ -7,11 +7,13 @@ import { OptionsMenu, SearchModal, CreditsModal } from '../ui/Components';
 import Logo from "../icons/logo.svg";
 import SearchIcon from "../icons/search.svg";
 import WriteIcon from "../icons/write.svg";
+import SunIcon from "../icons/sun.svg";
+import MoonIcon from "../icons/moon.svg";
 
 const Conversations = () => {
     const [openModal, setOpenModal] = createSignal(false);
     const [openCredits, setOpenCredits] = createSignal(false);
-    const { convID, setConvID, clearChat, convs, updateConvs, msgs, updateMsgs } = useProv();
+    const { convID, setConvID, clearChat, convs, updateConvs, msgs, updateMsgs, theme, toggleTheme } = useProv();
 
     // Dropdown menu options
     const handleEdit = async (id) => {
@@ -92,9 +94,20 @@ const Conversations = () => {
                     <SearchIcon class="w-6 h-6 mr-2" />
                     <span class="text-md">Buscar chats</span>
                 </div>
+                <div
+                    onclick={() => toggleTheme()}
+                    class="flex px-2 py-2 cursor-pointer border border-transparent rounded-lg"
+                >
+                    {theme() === 'dark' ? (
+                        <SunIcon class="w-6 h-6 mr-2" />
+                    ) : (
+                        <MoonIcon class="w-6 h-6 mr-2" />
+                    )}
+                    <span class="text-md">{theme() === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+                </div>
             </div>
             <div class="pt-8">
-                <h1 class="text-stone-400 mb-1 ml-2">Chats</h1>
+                <h1 class="mb-1 ml-2" style="color: var(--text-secondary)">Chats</h1>
                 {convs().length < 1 ? (
                     <span class='px-2 py-2'>No hay chats realizados</span>
                 ) : (
