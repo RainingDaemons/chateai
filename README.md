@@ -10,8 +10,9 @@
 
 # Installation
 
-## Build from Source
+## ChateAI
 
+Buidling from source:
 ```bash
 cd /chateai/frontend/
 pnpm install
@@ -25,6 +26,18 @@ wails build --platform linux/amd64 -o chateai_linux_amd64 -tags webkit2_41
 wails build --platform darwin/universal -o chateai_mac_universal.app
 ```
 
+## LLM Server
+
+Building dockerfile:
+```bash
+docker build -t llm-server /chateai/llm
+```
+
+Put your custom LLM model inside `/models` folder and change MODEL_DIR var in `.env`, then run:
+```bash
+python autorunner.py
+```
+
 # Requirements
 
 - [Git](https://git-scm.com/) installed and accessible in your terminal
@@ -32,6 +45,8 @@ wails build --platform darwin/universal -o chateai_mac_universal.app
 - [Wails](https://wails.io/docs/gettingstarted/installation) installed and accesible in your terminal
 - [Node.js](https://nodejs.org/en/download/)
 - [PNPM](https://pnpm.io/installation) recommended
+- [Python](https://www.python.org/downloads/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) to launch LLM server
 
 Note:
 - [SolidJS](https://docs.solidjs.com/), [TailwindCSS](https://tailwindcss.com/) and [Kobalte](https://kobalte.dev/docs/core/overview/introduction/) are used for frontend interfaces.
@@ -41,10 +56,12 @@ Note:
 
 | Feature | Status | Description |
 |---------|--------|-------------|
+| LLM Server | 🟢 | Inference endpoint for local LLMs deployment |
 | Storage | 🟢 | Store conversations in local database |
 | Search | 🟢 | Find messages in conversations history |
 | LLMs Finetuning | 🟢 | Finetune LLMs messages (temperature, repetition, etc.) |
 | Markdown support | 🟡 | Markdown formatting for LLMs messages |
+| Light/Dark Mode | 🟢 | Customizable visual experience with Light and Dark themes |
 | Custom options | 🔴 | Customizable app options |
 
 🟢 Supported &nbsp;&nbsp; 🟡 In Development &nbsp;&nbsp; 🔴 Planned
