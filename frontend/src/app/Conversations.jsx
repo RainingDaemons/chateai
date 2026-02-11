@@ -1,4 +1,4 @@
-import { createSignal, onMount } from 'solid-js';
+import { createSignal, createEffect, on } from 'solid-js';
 import { DBDeleteConversation, DBUpdateConversationName } from "../../wailsjs/go/main/App";
 
 import { useProv } from "../helpers/Provider";
@@ -13,7 +13,7 @@ import MoonIcon from "../icons/moon.svg";
 const Conversations = () => {
     const [openModal, setOpenModal] = createSignal(false);
     const [openCredits, setOpenCredits] = createSignal(false);
-    const { convID, setConvID, clearChat, convs, updateConvs, msgs, updateMsgs, theme, toggleTheme } = useProv();
+    const { convID, setConvID, clearChat, convs, updateConvs, msgs, updateMsgs, theme, toggleTheme, llmConn } = useProv();
 
     // Dropdown menu options
     const handleEdit = async (id) => {
@@ -53,11 +53,15 @@ const Conversations = () => {
         }
     }
 
-    // Ejecutar solo una vez al montar el componente
-    onMount(() => {
-        updateConvs();
-        updateMsgs();
-    });
+    // Ejecutar solamente cuando exista conexión con el LLM
+    createEffect(
+        on(llmConn, (curr, prev) => {
+            if (curr === true && prev !== true) {
+                updateConvs();
+                updateMsgs();
+            }
+        })
+    );
 
     return (
         <>

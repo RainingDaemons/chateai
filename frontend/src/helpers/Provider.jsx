@@ -2,6 +2,8 @@ import { createContext, useContext } from 'solid-js';
 import { createSignal, createEffect, onMount } from 'solid-js';
 import { DBGetAllConversations, DBGetAllMessages } from "../../wailsjs/go/main/App";
 
+import { fetchWithTimeout } from '../helpers/Utils';
+
 const ctx = createContext();
 
 const Provider = (props) => {
@@ -35,6 +37,7 @@ const Provider = (props) => {
     const [convs, setConvs] = createSignal([]);
     const [msgs, setMsgs] = createSignal([]);
     const [theme, setTheme] = createSignal(initTheme);
+    const [llmConn, setLlmConn] = createSignal(null);
 
     // Función para alternar tema
     const toggleTheme = () => {
@@ -75,10 +78,39 @@ const Provider = (props) => {
         }
     }
 
+    // Función para verificar conexión con el LLM
+    const pingLlm = async () => {
+        try {
+            const apiUrl = "http://127.0.0.1:8000/health";
+
+            const apiRes = await fetchWithTimeout(apiUrl, 10, {
+                method: "GET",
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!apiRes.ok) {
+                alert("Error: No se pudo conectar con el LLM, verifica tu conexión a internet");
+                setLlmConn(false);
+                return false;
+            } else {
+                setLlmConn(true);
+                return true;
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            alert("Error: No se pudo conectar con el LLM, verifica tu conexión a internet");
+        }
+    }
+
     // Carga inicial de conversaciones
-    onMount(() => {
-        updateConvs();
-        updateMsgs();
+    onMount(async () => {
+        const okConn = await pingLlm();
+        if (okConn) {
+            updateConvs();
+            updateMsgs();
+        }
     });
 
     // Limpiar chat
@@ -99,7 +131,8 @@ const Provider = (props) => {
         chat, setChat, clearChat,
         convs, updateConvs,
         msgs, updateMsgs,
-        theme, toggleTheme
+        theme, toggleTheme,
+        llmConn
     };
 
     return (

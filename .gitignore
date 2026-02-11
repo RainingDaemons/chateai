@@ -5,3 +5,6 @@ build/**
 !build/**/*.png
 !build/**/*.gif
 *.db
+.env
+__pycache__
+models/**

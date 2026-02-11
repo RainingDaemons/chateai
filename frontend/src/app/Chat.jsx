@@ -85,10 +85,10 @@ const Chat = () => {
             const llmParams = getLlmParams();
             const payload = {
                 "messages": [userMessage],
-                ...llmParams
+                "params": llmParams
             }
             
-            const apiRes = await fetchWithTimeout(apiUrl, {
+            const apiRes = await fetch(apiUrl, {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'

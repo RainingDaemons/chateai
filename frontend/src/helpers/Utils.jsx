@@ -1,7 +1,5 @@
-const TIMEOUT_SECS = 60
-
-const fetchWithTimeout = async (url, options = {}) => {
-    const timeoutMs = TIMEOUT_SECS * 1000;
+const fetchWithTimeout = async (url, timeout_secs, options = {}) => {
+    const timeoutMs = timeout_secs * 1000;
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
 
