@@ -96,7 +96,7 @@ jobs:
             build-essential pkg-config \
             libgtk-3-dev libglib2.0-dev \
             libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev nsis
+            librsvg2-dev nsis zip
 
       - name: Ensure Xcode (macOS)
         if: runner.os == 'macOS'
@@ -214,17 +214,20 @@ jobs:
         shell: bash
         run: |
           set -e
-          pushd build/release
-          zip -r "package-${{ matrix.name }}.zip" "${{ matrix.name }}"
-          popd
-          echo "ZIP creado: build/release/package-${{ matrix.name }}.zip"
+          pkgDir="build/release/${{ matrix.name }}"
+          zipPath="build/release/chateai-${{ matrix.name }}.zip"
+          [[ -d "$pkgDir" ]] || { echo "No existe $pkgDir"; exit 1; }
+          pushd "$(dirname "$pkgDir")" >/dev/null
+          zip -r "$(basename "$zipPath")" "$(basename "$pkgDir")"
+          popd >/dev/null
+          echo "ZIP creado: $zipPath"
 
       - name: Zip package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $pkgDir = "build/release/${{ matrix.name }}"
-          $zipPath = "build/release/package-${{ matrix.name }}.zip"
+          $zipPath = "build/release/chateai-${{ matrix.name }}.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
           Compress-Archive -Path "$pkgDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
           Write-Host "ZIP creado: $zipPath"
