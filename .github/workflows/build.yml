@@ -120,7 +120,8 @@ jobs:
           else
             echo "No package.json en ${{ matrix.frontend_dir }}, saltando instalación frontend"
           fi
-
+      
+      # Construir binarios de wails
       - name: Build (${{ matrix.platform }})
         shell: bash
         run: |
@@ -157,13 +158,83 @@ jobs:
             chmod +x "$EXEC_DST"
             echo "Ejecutable copiado a: $EXEC_DST"
           fi
+      
+      # Construir binarios de autorunner.py
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Build autorunner (PyInstaller)
+        shell: bash
+        run: |
+          set -e
+          pip install --upgrade pip pyinstaller
+          # Si autorunner.py estuviera en otra carpeta, ajusta la ruta aquí
+          pyinstaller --onefile --name autorunner --console autorunner.py
+          mkdir -p build/bin
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp dist/autorunner.exe build/bin/autorunner.exe
+          else
+            cp dist/autorunner build/bin/autorunner
+            chmod +x build/bin/autorunner
+          fi
+      
+      # Empaquetar para release
+      - name: Prepare package folder
+        shell: bash
+        run: |
+          set -e
+          PKG_DIR="build/release/${{ matrix.name }}"
+          mkdir -p "$PKG_DIR"
 
+          # Copiar ejecutable de Wails
+          if [[ ! -f "build/bin/${{ matrix.out }}" ]]; then
+            echo "No se encontró build/bin/${{ matrix.out }}" && exit 1
+          fi
+          cp "build/bin/${{ matrix.out }}" "$PKG_DIR/"
+
+          # Copiar autorunner
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp "build/bin/autorunner.exe" "$PKG_DIR/"
+          else
+            cp "build/bin/autorunner" "$PKG_DIR/"
+          fi
+
+          # Copiar carpeta llm completa
+          if [[ -d "llm" ]]; then
+            cp -R "llm" "$PKG_DIR/llm"
+          else
+            echo "ADVERTENCIA: carpeta 'llm' no encontrada en la raíz del repo"
+            mkdir -p "$PKG_DIR/llm"
+          fi
+      
+      - name: Zip package (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -e
+          pushd build/release
+          zip -r "package-${{ matrix.name }}.zip" "${{ matrix.name }}"
+          popd
+          echo "ZIP creado: build/release/package-${{ matrix.name }}.zip"
+
+      - name: Zip package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pkgDir = "build/release/${{ matrix.name }}"
+          $zipPath = "build/release/package-${{ matrix.name }}.zip"
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path "$pkgDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
+          Write-Host "ZIP creado: $zipPath"
+      
+      # Subir el ZIP al release
       - name: Upload asset to Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            build/bin/${{ matrix.out }}
-            build/bin/*.app
+            build/release/chateai-${{ matrix.name }}.zip
         continue-on-error: true

@@ -209,7 +209,7 @@ const CreditsModal = (props) => {
                             class="p-6 space-y-3"
                             id="credits-body"
                         >
-                            <p>Aplicación desarrollada por 
+                            <div>Aplicación desarrollada por 
                                 <a 
                                     href="https://github.com/RainingDaemons"
                                     target="_blank"
@@ -217,7 +217,20 @@ const CreditsModal = (props) => {
                                 >
                                     RainingDaemons
                                 </a>
-                            </p>
+                            </div>
+                            <div>Agradecimientos especiales:
+                                <ul>
+                                    <li>
+                                        <a 
+                                            href="https://github.com/Coragg"
+                                            target="_blank"
+                                            class="font-bold"
+                                        >
+                                            Coragg
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                             <div class="flex justify-center">
                                 <p>Versión: {pkg.version}</p>
                             </div>
