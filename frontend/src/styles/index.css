@@ -12,6 +12,8 @@
     --text-secondary: #7a6f63;
     --scrollbar: #c9bfb0;
     --msg-user-bg: #c2956e;
+    --msg-user-bg2: #e6b285;
+    --msg-user-files: #c48650;
     --msg-user-text: #ffffff;
     --msg-llm-bg: #f0e8dd;
     --msg-llm-text: #3d3229;
@@ -28,6 +30,8 @@
     --text-secondary: #71717a;
     --scrollbar: #2a2a2a;
     --msg-user-bg: #2563eb;
+    --msg-user-bg2: #3f3f3f;
+    --msg-user-files: #232e47;
     --msg-user-text: #ffffff;
     --msg-llm-bg: #4b5563;
     --msg-llm-text: #ffffff;
@@ -83,9 +87,39 @@ body {
     color: var(--text-secondary);
 }
 
-#chat #message-send button{
+#chat #message-send #send-btn{
     background-color: var(--msg-user-bg);
     color: var(--msg-user-text);
+}
+
+#chat #message-send #settings-btn{
+    &:hover {
+        background-color: var(--msg-user-bg2);
+    }
+}
+
+#chat #message-send #rag-files #files-btn{
+    background-color: var(--msg-user-bg);
+    color: var(--msg-user-text);
+}
+
+#chat #message-send #rag-files #files{
+    background-color: var(--msg-user-files);
+    color: var(--msg-user-text);
+}
+
+#chat #message-send #rag-files #files-plus{
+    background-color: var(--msg-user-files);
+    color: var(--msg-user-text);
+}
+
+#chat #message-send #rag-files #files-plus-extended{
+    background-color: var(--msg-user-files);
+    color: var(--msg-user-text);
+}
+
+#chat #message-send #rag-files #files-plus-extended-tlp{
+    background-color: var(--bg-primary);
 }
 
 #chat #message-send svg {
@@ -117,6 +151,13 @@ body {
 
 #options .option-item.delete{
     @apply text-red-400;
+}
+
+/* Settings */
+#settings {
+    border-color: var(--border-color);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
 }
 
 /* Search */

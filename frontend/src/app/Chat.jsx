@@ -1,37 +1,13 @@
-import { createSignal, createEffect, on } from 'solid-js';
+import { createEffect, on } from 'solid-js';
 
-import { DBCreateConversation, DBCreateMessage, DBGetMessagesByConversationID } from "../../wailsjs/go/main/App";
-import { fetchWithTimeout, getLlmParams } from '../helpers/Utils';
+import { DBGetMessagesByConversationID } from "../../wailsjs/go/main/App";
 import { useProv } from "../helpers/Provider";
-
 import { textParser } from '../helpers/Parser';
+import MessageBar from '../components/MessageBar.jsx';
 import "../styles/parser.css";
 
-import SendIcon from "../icons/send.svg";
-import LoadingIcon from "../icons/loading.svg";
-
 const Chat = () => {
-    const [message, setMessage] = createSignal("");
-    const [isLoading, setIsLoading] = createSignal(false);
-    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs } = useProv();
-
-    const formatText = (text) => {
-        const index = text.indexOf("</think>");
-        if (index === -1) return text.trim();
-        return text.slice(index + "</think>".length).trim();
-    };
-
-    const clearOldMessage = () => {
-        setMessage("");
-    }
-
-    const handleChange = (e) => {
-        setMessage(e.currentTarget.value);
-    };
-
-    const updateChat = (newMessage) => {
-        setChat([...chat(), newMessage]);
-    }
+    const { convID, chat, setChat } = useProv();
 
     // Database
     const dbLoadChat = async (newID) => {
@@ -42,117 +18,6 @@ const Chat = () => {
         } catch (e) {
             setChat([]);
             console.log("Error: No se ha podido obtener el listado de conversaciones");
-        }
-    }
-
-    const dbSaveMessage = async (id, role, content) => {
-        try {
-            await DBCreateMessage(id, role, content);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    const dbCreateConversation = async (msg) => {
-        try {
-            // Guardar como nombre los primeros 60 caracteres
-            const preview = msg.length > 60
-                ? msg.slice(0, 60)
-                : msg;
-
-            const jsonStr = await DBCreateConversation(preview);
-            const payload = JSON.parse(jsonStr);
-            return payload.id;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // Buttons
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        const userMessage = {
-            "role": "user",
-            "content": message()
-        };
-
-        const apiUrl = "http://127.0.0.1:8000/v1/chat/completions";
-
-        setIsLoading(true);
-        try {
-            const llmParams = getLlmParams();
-            const payload = {
-                "messages": [userMessage],
-                "params": llmParams
-            }
-            
-            const apiRes = await fetch(apiUrl, {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!apiRes.ok) {
-                alert("Error: el servidor no ha respondido correctamente");
-                return;
-            }
-
-            // Parsear la respuesta
-            const data = await apiRes.json();
-
-            // Validar respuesta del LLM
-            const content = data.choices[0].message.content;
-            if (typeof content !== "string" || content.trim() === "") {
-                alert("Error: respuesta del LLM es inválida");
-                return;
-            }
-            
-            // Si es una nueva conversación, crear primero en BD
-            let actualID = convID();
-            if (chat().length == 0) {
-                const newConvID = await dbCreateConversation(message());
-                actualID = newConvID;
-            }
-
-            await dbSaveMessage(actualID, userMessage.role, userMessage.content);
-
-            // Formatear respuesta del LLM
-            const res = formatText(data.choices[0].message.content);
-            const llmMessage = {
-                "role": "assistant",
-                "content": res
-            };
-
-            // Actualizar UI
-            updateChat(userMessage);
-            clearOldMessage();
-            updateChat(llmMessage);
-
-            await dbSaveMessage(actualID, llmMessage.role, llmMessage.content);
-
-            // Actualizar listado de conversaciones y mensajes
-            setConvID(actualID);
-            await updateConvs();
-            await updateMsgs();
-        } catch (err) {
-            console.error('Error:', err);
-            alert("Error: No se pudo conectar con el LLM, verifica tu conexión a internet");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Keyboard
-    const handleKeyboard = (e) => {
-        if (e.isComposing) return;
-        if (isLoading() || !message().trim()) return;
-
-        if (e.key === 'Enter' && !e.shiftKey) {
-            handleSubmit(e);
         }
     }
 
@@ -181,31 +46,7 @@ const Chat = () => {
             {chat().length < 1 ? (
                 <div class='w-full h-full flex flex-col justify-center items-center'>
                     <h1 class="mb-6 text-center text-2xl font-semibold">¿Por dónde empezamos?</h1>
-                    <div
-                        class="mx-auto my-2 px-4 py-2 w-200 max-w-2xl sm:w-full flex border border-transparent rounded-full"
-                        id='message-send'
-                    >
-                        <input
-                            value={message()}
-                            onInput={handleChange}
-                            onKeyDown={(e) => handleKeyboard(e)}
-                            type="text"
-                            placeholder="Pregunta lo que quieras"
-                            class="px-2 mr-4 grow outline-none"
-                        />
-                        <div>
-                            {isLoading() ? (
-                                <LoadingIcon class="w-10 h-10" />
-                            ) : (
-                                <button
-                                    onClick={handleSubmit}
-                                    class="w-10 h-10 flex items-center justify-center rounded-full"
-                                >
-                                    <SendIcon class="w-6 h-6" />
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                    <MessageBar />
                 </div>
             ) : (
                 <>
@@ -238,29 +79,10 @@ const Chat = () => {
                         <div class="absolute inset-x-0 bottom-0 z-50">
                             <div class="mx-auto max-w-2xl px-10 pb-[env(safe-area-inset-bottom)]">
                                 <div
-                                    class="my-2 px-4 py-2 w-full flex rounded-full"
+                                    class='rounded-xl'
                                     id='message-send'
                                 >
-                                    <input
-                                        value={message()}
-                                        onInput={handleChange}
-                                        onKeyDown={(e) => handleKeyboard(e)}
-                                        type="text"
-                                        placeholder="Pregunta lo que quieras"
-                                        class="px-2 mr-4 grow outline-none"
-                                    />
-                                    <div>
-                                        {isLoading() ? (
-                                            <LoadingIcon class="w-10 h-10" />
-                                        ) : (
-                                            <button
-                                                onClick={handleSubmit}
-                                                class="w-10 h-10 flex items-center justify-center rounded-full"
-                                            >
-                                                <SendIcon class="w-6 h-6" />
-                                            </button>
-                                        )}
-                                    </div>
+                                    <MessageBar />
                                 </div>
                             </div>
                         </div>
