@@ -20,11 +20,12 @@ def ensure_dir(p):
 def docker_available():
     return shutil.which("docker") is not None
 
-def build_docker_command(base_dir, image, host_models_rel, host_llm_rel, container_models, container_llm, host_port, container_port, use_gpus):
+def build_docker_command(base_dir, image, host_models_rel, host_data_rel, host_llm_rel, container_models, container_data, container_llm, host_port, container_port, use_gpus):
     """
     Construye el comando docker run
     """
     host_models = (base_dir / host_models_rel).resolve()
+    host_data = (base_dir / host_data_rel).resolve()
     host_llm = (base_dir / host_llm_rel).resolve()
 
     ensure_dir(host_models)
@@ -35,6 +36,7 @@ def build_docker_command(base_dir, image, host_models_rel, host_llm_rel, contain
         "--rm", "-it",
         "-p", f"{host_port}:{container_port}",
         "-v", f"{str(host_models)}:{container_models}",
+        "-v", f"{str(host_data)}:{container_data}",
         "-v", f"{str(host_llm)}:{container_llm}",
     ]
 
@@ -55,13 +57,15 @@ def main():
         sys.exit(1)
 
     # Ejecutando docker
-    image_name = "vllm"
+    image_name = "llm-server"
     cmd = build_docker_command(
         base_dir=base_dir,
         image=image_name,
         host_models_rel="models",
+        host_data_rel="data",
         host_llm_rel="llm",
         container_models="/models",
+        container_data="/data",
         container_llm="/app",
         host_port=8000,
         container_port=8000,

@@ -4,7 +4,8 @@ frontend/wailsjs
 build/**
 !build/**/*.png
 !build/**/*.gif
-*.db
-.env
-__pycache__
 models/**
+data/**
+.env
+.pyc
+__pycache__

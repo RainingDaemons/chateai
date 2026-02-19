@@ -2,17 +2,33 @@ import inspect
 
 from vllm import SamplingParams
 from typing import Optional, Dict
-from schemas import Numeric, Message
+from server.schemas import Numeric, Message
 
-def build_prompt_from_messages(messages, tokenizer, internal_thinking):
+def build_prompt_from_messages(messages, tokenizer, internal_thinking, using_rag=None, context=None):
     """
     Utilizar una chat template del tokenizer especificado, en caso contrario generar un prompt nuevo
     """
+    system_instruct = ""
+
     language_instruct = (
         "Responde SIEMPRE en el mismo idioma que el usuario usó en su mensaje. "
         "Si el usuario mezcla idiomas, responde en el idioma predominante. "
         "Nunca cambies el idioma por tu cuenta."
     )
+
+    system_instruct += language_instruct
+
+    # Reglas del sistema cuando se utiliza RAG
+    if using_rag:
+        rag_context = (
+            "Eres un asistente con RAG. Usa EXCLUSIVAMENTE el siguiente contexto para responder. "
+            "Si no hay información suficiente en el contexto, responde: "
+            "\"No encontré suficiente información en la base de conocimiento local.\" "
+            "Cita fragmentos relevantes con [doc:...|chunk:...] cuando corresponda.\n\n"
+            f"### CONTEXTO\n{context}\n### FIN CONTEXTO"
+        )
+
+        system_instruct += rag_context
 
     # Switch: Evitar razonamiento interno
     if not internal_thinking:
@@ -20,11 +36,10 @@ def build_prompt_from_messages(messages, tokenizer, internal_thinking):
             "Nunca reveles cadenas de pensamiento ni contenido interno como <think>. "
             "Si necesitas razonar, hazlo internamente y devuelve solo la respuesta final."
         )
-    else: 
-        thinking_instruct = ""
+
+        system_instruct += thinking_instruct
     
-    messages = [Message(role="system", content=language_instruct),
-        Message(role="system", content=thinking_instruct)] + messages
+    messages = [Message(role="system", content=system_instruct)] + messages
 
     # Utilizar plantilla de chat del tokenizer en caso de que exista
     try:
