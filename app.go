@@ -30,7 +30,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	// Cargar BD
-	sqliteDB, err := db.Connect("./data.db")
+	sqliteDB, err := db.Connect("./data/data.db")
 	if err != nil {
 		log.Fatal(err)
 	}

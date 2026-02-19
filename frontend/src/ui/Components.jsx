@@ -1,7 +1,9 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Dialog } from "@kobalte/core/dialog";
 import { Switch } from "@kobalte/core/switch";
+import { Toast, toaster } from "@kobalte/core";
 import { createSignal, createMemo } from "solid-js";
+import { Portal } from "solid-js/web";
 
 import pkg from "../../package.json";
 import { useProv } from "../helpers/Provider";
@@ -255,7 +257,7 @@ const CreditsModal = (props) => {
                         class="w-full max-w-lg rounded-xl shadow-xl border"
                         id="credits"
                     >
-                        <div 
+                        <div
                             class="flex justify-between px-6 py-4"
                             id="credits-title"
                         >
@@ -267,12 +269,12 @@ const CreditsModal = (props) => {
                             </Dialog.CloseButton>
                         </div>
 
-                        <div 
+                        <div
                             class="p-6 space-y-3"
                             id="credits-body"
                         >
-                            <div>Aplicación desarrollada por 
-                                <a 
+                            <div>Aplicación desarrollada por
+                                <a
                                     href="https://github.com/RainingDaemons"
                                     target="_blank"
                                     class="font-bold"
@@ -283,7 +285,7 @@ const CreditsModal = (props) => {
                             <div>Agradecimientos especiales:
                                 <ul>
                                     <li>
-                                        <a 
+                                        <a
                                             href="https://github.com/Coragg"
                                             target="_blank"
                                             class="font-bold"
@@ -304,4 +306,67 @@ const CreditsModal = (props) => {
     );
 };
 
-export { OptionsMenu, SettingsMenu, SearchModal, CreditsModal };
+const ToastHost = () => {
+    return (
+        <Portal>
+            <Toast.Region class="pointer-events-none fixed inset-0 z-[9999] flex">
+                <div class="mx-auto mt-3 flex w-full max-w-[520px] justify-center">
+                    <Toast.List class="flex w-full flex-col gap-2" />
+                </div>
+            </Toast.Region>
+        </Portal>
+    );
+}
+
+const ConnectionToast = ({ title, description, duration, variation } = {}) => {
+    return toaster.show((props) => (
+        <Toast.Root toastId={props.toastId} duration={duration}>
+            <div 
+                class={`
+                    pointer-events-auto w-full overflow-hidden rounded-md border shadow-md
+                    ${variation == "success" ? 'border-emerald-300' : 'border-rose-300'}
+                `}
+                id="toast"
+            >
+                <div class="flex items-start gap-3 px-3 py-2">
+                    <div class="flex-1">
+                        <Toast.Title 
+                            class="font-medium"
+                        >
+                            {title}
+                        </Toast.Title>
+                        <Toast.Description 
+                            class="text-sm text-slate-600" 
+                            id="description"
+                        >
+                            {description}
+                        </Toast.Description>
+                    </div>
+
+                    <Toast.CloseButton
+                        class="rounded p-1"
+                        aria-label="Cerrar"
+                        id="close-btn"
+                    >
+                        x
+                    </Toast.CloseButton>
+                </div>
+
+                <Toast.ProgressTrack class="w-full">
+                    <Toast.ProgressFill 
+                        class={`
+                            h-[5px] w-(--kb-toast-progress-fill-width) origin-left transition-transform ease-linear will-change-transform
+                            ${variation == "success" ? 'bg-emerald-300' : 'bg-rose-300'}
+                        `}
+                        style={{
+                            transform: "scaleX(var(--kb-toast-progress))",
+                            transitionDuration: "var(--kb-toast-progress-duration)",
+                        }}
+                    />
+                </Toast.ProgressTrack>
+            </div>
+        </Toast.Root>
+    ));
+}
+
+export { OptionsMenu, SettingsMenu, SearchModal, CreditsModal, ToastHost, ConnectionToast };

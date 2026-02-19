@@ -220,6 +220,23 @@ body {
     }
 }
 
+/* Toast */
+#toast {
+    color: var(--text-primary);
+    background-color: var(--bg-sidebar);
+}
+
+#toast #description{
+    color: var(--text-secondary);
+}
+
+#toast #close-btn{
+    color: var(--text-secondary);
+    &:hover {
+        color: var(--text-primary);
+    }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;

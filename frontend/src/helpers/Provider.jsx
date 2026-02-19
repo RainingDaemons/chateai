@@ -92,7 +92,6 @@ const Provider = (props) => {
             });
 
             if (!apiRes.ok) {
-                alert("Error: No se pudo conectar con el LLM, verifica tu conexión a internet");
                 setLlmConn(false);
                 return false;
             } else {
@@ -100,8 +99,8 @@ const Provider = (props) => {
                 return true;
             }
         } catch (err) {
-            console.error('Error:', err);
-            alert("Error: No se pudo conectar con el LLM, verifica tu conexión a internet");
+            setLlmConn(false);
+            return false;
         }
     }
 

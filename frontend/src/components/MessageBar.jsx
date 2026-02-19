@@ -217,8 +217,8 @@ const MessageBar = () => {
                         class="cursor-pointer text-sm px-3 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                         id="files-btn"
                     >
-                        <div class='flex gap-1'>
-                            <ClipIcon />
+                        <div class='flex items-center gap-1'>
+                            <ClipIcon class="w-6 h-6" />
                             <span>Adjuntar archivos</span>
                         </div>
                         <input
