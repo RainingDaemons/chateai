@@ -12,7 +12,7 @@
 
 ## ChateAI
 
-Buidling from source:
+Building from source:
 ```bash
 cd /chateai/frontend/
 pnpm install
@@ -38,6 +38,11 @@ Put your custom LLM model inside `/models` folder and change MODEL_DIR var in `.
 python autorunner.py
 ```
 
+If you are going to use the RAG feature, download first the recommended embedding model by running:
+```bash
+python setup.py
+```
+
 # Requirements
 
 - [Git](https://git-scm.com/) installed and accessible in your terminal
@@ -59,7 +64,8 @@ Note:
 | LLM Server | 🟢 | Inference endpoint for local LLMs deployment |
 | Storage | 🟢 | Store conversations in local database |
 | Search | 🟢 | Find messages in conversations history |
-| LLMs Finetuning | 🟢 | Finetune LLMs messages (temperature, repetition, etc.) |
+| RAG | 🟢 | Documents context for conversations |
+| Finetuning | 🟢 | Finetune LLMs messages (temperature, repetition, etc.) |
 | Markdown support | 🟡 | Markdown formatting for LLMs messages |
 | Light/Dark Mode | 🟢 | Customizable visual experience with Light and Dark themes |
 | Custom options | 🔴 | Customizable app options |

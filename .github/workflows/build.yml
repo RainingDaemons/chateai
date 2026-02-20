@@ -159,7 +159,7 @@ jobs:
             echo "Ejecutable copiado a: $EXEC_DST"
           fi
       
-      # Construir binarios de autorunner.py
+      # Construir binarios de autorunner.py y setup.py
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -170,14 +170,17 @@ jobs:
         run: |
           set -e
           pip install --upgrade pip pyinstaller
-          # Si autorunner.py estuviera en otra carpeta, ajusta la ruta aquí
           pyinstaller --onefile --name autorunner --console autorunner.py
+          pyinstaller --onefile --name setup --console setup.py
           mkdir -p build/bin
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cp dist/autorunner.exe build/bin/autorunner.exe
+            cp dist/setup.exe build/bin/setup.exe
           else
             cp dist/autorunner build/bin/autorunner
+            cp dist/setup build/bin/setup
             chmod +x build/bin/autorunner
+            chmod +x build/bin/setup
           fi
       
       # Empaquetar para release
@@ -199,6 +202,13 @@ jobs:
             cp "build/bin/autorunner.exe" "$PKG_DIR/"
           else
             cp "build/bin/autorunner" "$PKG_DIR/"
+          fi
+
+          # Copiar setup
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp "build/bin/setup.exe" "$PKG_DIR/"
+          else
+            cp "build/bin/setup" "$PKG_DIR/"
           fi
 
           # Copiar carpeta llm completa
@@ -233,11 +243,19 @@ jobs:
           Write-Host "ZIP creado: $zipPath"
       
       # Subir el ZIP al release
-      - name: Upload asset to Release
+      - name: Upload asset to Release (release event)
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: build/release/package-${{ matrix.name }}.zip
+          overwrite: true
+      
+      # Alt: Reintentar subir al release cuando se invoca evento de tag
+      - name: Upload asset to Release (tag push)
         if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: |
-            build/release/chateai-${{ matrix.name }}.zip
-        continue-on-error: true
+          files: build/release/package-${{ matrix.name }}.zip
+          overwrite: true
