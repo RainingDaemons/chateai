@@ -59,6 +59,11 @@
     @apply ml-2;
 }
 
+/* Enlaces */
+.markdown-item .rag-local-link {
+    color: var(--md-emphasis);
+}
+
 /* Código */
 .markdown-item pre {
     @apply p-2 my-2 rounded-md;

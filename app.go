@@ -3,8 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
+	"mime"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"chateai/backend"
 	db "chateai/backend/database"
@@ -18,8 +25,19 @@ type App struct {
 	db       *sql.DB
 	convRepo *repository.ConversationRep
 	msgRepo  *repository.MessageRep
+	docsBase string
 }
 
+// File struct
+type FilePayload struct {
+	Name       string `json:"name"`
+	Mime       string `json:"mime"`
+	DataBase64 string `json:"dataBase64"`
+}
+
+/*
+* WAILS
+ */
 // NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{}
@@ -29,8 +47,15 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	dbPath := "./data/data.db"
+
+	// Asegurar que el directorio exista
+	if err := ensureDir(filepath.Dir(dbPath)); err != nil {
+		log.Fatal("[!] No se pudo crear el directorio de datos: ", err)
+	}
+
 	// Cargar BD
-	sqliteDB, err := db.Connect("./data/data.db")
+	sqliteDB, err := db.Connect(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,6 +96,143 @@ func (a *App) shutdown(ctx context.Context) {
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+/*
+* SYSTEM UTILS
+ */
+// Ensure some directory exists
+func ensureDir(dir string) error {
+	return os.MkdirAll(dir, os.ModePerm)
+}
+
+// Get info for some directory existence
+func dirExists(p string) bool {
+	info, err := os.Stat(p)
+	return err == nil && info.IsDir()
+}
+
+// Get source directory
+func getSourceDir() (string, error) {
+	// Obtener directorio del archivo fuente
+	if _, file, _, ok := runtime.Caller(0); ok && file != "" {
+		return filepath.Dir(file), nil
+	}
+
+	// Alt: Obtener directorio del ejecutable
+	if exe, err := os.Executable(); err == nil && exe != "" {
+		return filepath.Dir(exe), nil
+	}
+
+	// Alt: Obtener directorio de trabajo
+	if wd, err := os.Getwd(); err == nil && wd != "" {
+		return wd, nil
+	}
+
+	return "", errors.New("No se pudo determinar el directorio raiz")
+}
+
+// Find data/docs directory
+func findUpwardsFor(startDir, subpath string, maxDepth int) (string, bool) {
+	cur := filepath.Clean(startDir)
+	for i := 0; i <= maxDepth; i++ {
+		candidate := filepath.Join(cur, subpath)
+		if dirExists(candidate) {
+			return candidate, true
+		}
+		next := filepath.Dir(cur)
+		if next == cur {
+			break
+		}
+		cur = next
+	}
+	return "", false
+}
+
+// Update docsBase directory
+func (a *App) getDocsBase() (string, error) {
+	if a.docsBase != "" {
+		return a.docsBase, nil
+	}
+
+	startDir, err := getSourceDir()
+	if err != nil {
+		return "", err
+	}
+
+	// Busca hacia arriba un directorio que contenga "data/docs" (hasta 8 niveles)
+	if p, ok := findUpwardsFor(startDir, filepath.Join("data", "docs"), 8); ok {
+		a.docsBase = filepath.Clean(p)
+		return a.docsBase, nil
+	}
+
+	return "", errors.New("No se encontró la carpeta data/docs en el directorio de ejecución")
+}
+
+// Restrict allowed path
+func (a *App) isPathAllowed(abs string) bool {
+	allowedBase, err := a.getDocsBase()
+	if err != nil {
+		log.Printf("[!] Error: no se pudo resolver docsBase: %v", err)
+		return false
+	}
+
+	abs = filepath.Clean(abs)
+	base := filepath.Clean(allowedBase)
+
+	rel, err := filepath.Rel(base, abs)
+	if err != nil {
+		return false
+	}
+
+	return !strings.HasPrefix(rel, "..")
+}
+
+// Read local files
+func (a *App) ReadLocalFile(path string) (*FilePayload, error) {
+	if path == "" {
+		return nil, errors.New("ruta vacía")
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !a.isPathAllowed(abs) {
+		return nil, errors.New("acceso denegado a la ruta solicitada")
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() {
+		return nil, errors.New("la ruta es un directorio, no un archivo")
+	}
+
+	b, err := os.ReadFile(abs)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := strings.ToLower(filepath.Ext(abs))
+	m := mime.TypeByExtension(ext)
+	// Fallback genérico
+	if m == "" {
+		m = "application/octet-stream"
+	}
+
+	return &FilePayload{
+		Name:       info.Name(),
+		Mime:       m,
+		DataBase64: base64.StdEncoding.EncodeToString(b),
+	}, nil
+}
+
+/*
+* FRONT UTILS
+ */
+func (a *App) GetDocsDir() (string, error) {
+	return a.getDocsBase()
 }
 
 /*

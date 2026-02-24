@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'solid-js';
 import { createSignal, createEffect, onMount } from 'solid-js';
-import { DBGetAllConversations, DBGetAllMessages } from "../../wailsjs/go/main/App";
+import { DBGetAllConversations, DBGetAllMessages, GetDocsDir } from "../../wailsjs/go/main/App";
 
 import { fetchWithTimeout } from '../helpers/Utils';
 
@@ -39,6 +39,7 @@ const Provider = (props) => {
     const [theme, setTheme] = createSignal(initTheme);
     const [llmConn, setLlmConn] = createSignal(null);
     const [ragEnabled, setRagEnabled] = createSignal(false);
+    const [docsDir, setDocsDir] = createSignal(null);
 
     // Función para alternar tema
     const toggleTheme = () => {
@@ -104,12 +105,19 @@ const Provider = (props) => {
         }
     }
 
-    // Carga inicial de conversaciones
+    // Carga inicial de conversaciones y directorio data/docs
     onMount(async () => {
-        const okConn = await pingLlm();
-        if (okConn) {
-            updateConvs();
-            updateMsgs();
+        try {
+            const okConn = await pingLlm();
+            if (okConn) {
+                updateConvs();
+                updateMsgs();
+            }
+            const path = await GetDocsDir();
+            setDocsDir(path);
+        } catch (e) {
+            console.error('No se pudo obtener docsDir:', e);
+            setDocsDir(null);
         }
     });
 
@@ -121,8 +129,8 @@ const Provider = (props) => {
 
     // Actualizar conversation ID
     createEffect(() => {
-        try { 
-            sessionStorage.setItem('convID', JSON.stringify(convID())); 
+        try {
+            sessionStorage.setItem('convID', JSON.stringify(convID()));
         } catch { }
     });
 
@@ -133,7 +141,8 @@ const Provider = (props) => {
         msgs, updateMsgs,
         theme, toggleTheme,
         llmConn,
-        ragEnabled, setRagEnabled
+        ragEnabled, setRagEnabled,
+        docsDir, setDocsDir
     };
 
     return (

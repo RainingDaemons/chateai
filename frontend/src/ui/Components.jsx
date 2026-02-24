@@ -273,7 +273,8 @@ const CreditsModal = (props) => {
                             class="p-6 space-y-3"
                             id="credits-body"
                         >
-                            <div>Aplicación desarrollada por
+                            <div class="flex gap-1">
+                                <span>Aplicación desarrollada por</span>
                                 <a
                                     href="https://github.com/RainingDaemons"
                                     target="_blank"
@@ -282,7 +283,8 @@ const CreditsModal = (props) => {
                                     RainingDaemons
                                 </a>
                             </div>
-                            <div>Agradecimientos especiales:
+                            <div>
+                                <span>Agradecimientos especiales:</span>
                                 <ul>
                                     <li>
                                         <a
