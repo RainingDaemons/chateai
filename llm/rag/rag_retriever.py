@@ -19,10 +19,6 @@ class RAGRetriever:
         self._ensure_files()
         self.index = faiss.read_index(index_path)
         self.metas = self._load_meta_lines(meta_path)
-
-        with open(meta_path, "r", encoding="utf-8") as f:
-            for line in f:
-                self.metas.append(json.loads(line))
     
     def _ensure_files(self):
         """
@@ -85,24 +81,75 @@ class RAGRetriever:
         for score, idx in zip(D[0], I[0]):
             if idx == -1:
                 continue
+
             m = self.metas[idx]
-            hits.append({
+            hit = {
                 "score": float(score),
-                "source": m["source"],
-                "chunk_id": m["chunk_id"],
-                "text": m["text"]
-            })
-        
+                "source": m.get("source"),
+                "chunk_id": m.get("chunk_id"),
+                "text": m.get("text", "")
+            }
+
+            # Mantener campos para contexto enriquecido
+            for k in ("source_type", "doc_name", "url", "site_domain", "captured_at", "title", "snippet", "summary"):
+                if k in m:
+                    hit[k] = m[k]
+
+            # Validaciones
+            if "source_type" not in hit:
+                hit["source_type"] = "site" if (("url" in hit) or ("site_domain" in hit)) else "doc"
+            if hit["source_type"] == "doc" and "doc_name" not in hit:
+                hit["doc_name"] = os.path.basename(hit["source"] or "desconocido")
+
+            hits.append(hit)
+
         return hits
 
 def build_context(docs):
     """
-    Construye un contexto compacto y citable
-    """
-    parts = []
-
-    for d in docs:
-        header = f"[doc:{os.path.basename(d['source'])}|chunk:{d['chunk_id']}|score:{d['score']:.3f}]"
-        parts.append(f"{header}\n{d['text'].strip()}")
+    Construye un contexto compacto y citable para documentos y sitios web.
     
-    return "\n\n---\n\n".join(parts)
+    Formatos de cita:
+    - DOCS: [doc:{name}|chunk:{id}|score:{s}]
+    - WEB : [site:{url}|chunk:{id}|score:{s}]
+    """
+    docs_parts, web_parts = [], []
+
+    for i, d in enumerate(docs):
+        txt = (d.get("text") or "").strip()
+        if not txt:
+            continue
+
+        # Score y chunk id
+        try:
+            score = float(d.get("score", 0.0))
+        except Exception:
+            score = 0.0
+        score_str = f"{score:.3f}"
+        chunk_id = d.get("chunk_id", i)
+
+        # Detectar tipo de fuente (site/doc)
+        source_type = d.get("source_type")
+        if not source_type:
+            source_type = "site" if d.get("url") else "doc"
+
+        # Preferimos la URL guardada
+        if source_type == "site":
+            url = d.get("url") or d.get("source") or "desconocido"
+            header_tag = f"[site:{url}|chunk:{chunk_id}|score:{score_str}]"
+            web_parts.append(f"{header_tag}\n{txt}")
+        # DOC local
+        else:
+            doc_name = d.get("doc_name")
+            if not doc_name:
+                doc_name = os.path.basename(d.get("source", "desconocido"))
+            header_tag = f"[doc:{doc_name}|chunk:{chunk_id}|score:{score_str}]"
+            docs_parts.append(f"{header_tag}\n{txt}")
+
+    sections = []
+    if docs_parts:
+        sections.append("#### CONTEXTO: DOCS\n" + "\n\n".join(docs_parts))
+    if web_parts:
+        sections.append("#### CONTEXTO: WEB\n" + "\n\n".join(web_parts))
+
+    return "\n\n---\n\n".join(sections) if sections else ""

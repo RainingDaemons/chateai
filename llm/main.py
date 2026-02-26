@@ -9,6 +9,7 @@ from server.schemas import Message, ChatRequest, ChatChoice, ChatResponse
 from server.utils import build_prompt_from_messages, build_model_params
 from rag.rag_retriever import RAGRetriever, build_context
 from rag.rag_indexer import RAGIndexer
+from rag.internet_search import get_webpages
 
 load_dotenv()
 
@@ -25,7 +26,11 @@ RAG_INDEX_PATH = os.getenv("RAG_INDEX_PATH")
 RAG_META_PATH = os.getenv("RAG_META_PATH")
 RAG_EMBED_MODEL = os.getenv("RAG_EMBED_MODEL")
 RAG_ENABLED = os.getenv("RAG_ENABLED")
-ALLOWED_EXTS = {".pdf", ".md"}  # Extensiones soportadas en RAG
+ALLOWED_EXTS = {".pdf", ".txt", ".md"}  # Extensiones soportadas en RAG
+
+WEB_DIR = os.getenv("WEB_DIR")
+LS_API_URL = os.getenv("LANGSEARCH_API_URL")
+LS_API_KEY = os.getenv("LANGSEARCH_API_KEY")
 
 # Server init
 app = FastAPI(title="vLLM API")
@@ -52,7 +57,7 @@ _reindex_lock = threading.Lock()
 
 def _rebuild_index_and_reload():
     global retriever
-    indexer = RAGIndexer(DOCS_DIR, RAG_INDEX_PATH, RAG_META_PATH, RAG_EMBED_MODEL)
+    indexer = RAGIndexer([DOCS_DIR, WEB_DIR], RAG_INDEX_PATH, RAG_META_PATH, RAG_EMBED_MODEL)
     indexer.main()
     retriever = RAGRetriever(RAG_INDEX_PATH, RAG_META_PATH, RAG_EMBED_MODEL)
 
@@ -97,7 +102,8 @@ def chat_completions(req: ChatRequest):
 async def chat_rag(
         request: Request,
         background: BackgroundTasks,
-        sync: bool = Form(True)
+        sync: bool = Form(True),
+        internet: bool = Form(False),
     ):
     """
     Subir documentos y guadarlos, después reindexar y cargar preguntas en el retriever.
@@ -124,7 +130,10 @@ async def chat_rag(
                 detail=f"JSON inválido en campo 'chat': {e}"
             )
     
-    # En caso que vengan archivos: Recolectar y enumeradar como file0, file1, etc.
+    """
+    Documentos
+    """
+    # Recolectar y enumerar archivos como file0, file1, etc.
     uploads = []
     for i in range(10):
         key = f"file{i}"
@@ -132,12 +141,6 @@ async def chat_rag(
         for val in values:
             if hasattr(val, "filename") and hasattr(val, "read"):
                 uploads.append(val)
-
-    if not uploads:
-        raise HTTPException(
-            status_code=400,
-            detail="No se adjuntaron archivos"
-        )
 
     if len(uploads) > 10:
         raise HTTPException(
@@ -156,7 +159,7 @@ async def chat_rag(
                 detail=f"Formato no soportado en '{uf.filename}'. Solo se permiten: {', '.join(sorted(ALLOWED_EXTS))}"
             )
 
-    # Guardar todos los archivos
+    # Guardar los archivos
     saved_files = []
     for uf in uploads:
         safe_name = (uf.filename or "unnamed").replace("/", "_").replace("\\", "_")
@@ -165,6 +168,40 @@ async def chat_rag(
         with open(dst_path, "wb") as f:
             f.write(content)
         saved_files.append(safe_name)
+
+    """
+    Internet
+    """
+    # Ejecutar búsqueda y guardar paginas en .md
+    web_files = []
+    search_query = None
+    if internet:
+        if chat_req:
+            for m in reversed(chat_req.messages):
+                if m.role == "user":
+                    search_query = m.content
+                    break
+
+        if not search_query:
+            raise HTTPException(
+                status_code=400,
+                detail="[RAG] Error: No se encontró pregunta del usuario en 'chat'"
+            )
+
+        try:
+            web_files = get_webpages(search_query, WEB_DIR, LS_API_URL, LS_API_KEY)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error en búsqueda web: {e}"
+            )
+
+    # Si no hay ni documentos o internet, arrojar error
+    if not uploads and not internet:
+        raise HTTPException(
+            status_code=400, 
+            detail="Error: No se adjuntaron archivos y no se activó modo internet"
+        )
 
     # Reindex + reload retriever
     def _task_reindex():
@@ -180,7 +217,6 @@ async def chat_rag(
         
         # Si vienen mensajes entonces llamar al retriever
         if chat_req:
-            # Obtener última pregunta del usuario
             user_query = None
             for m in reversed(chat_req.messages):
                 if m.role == "user":
@@ -201,7 +237,7 @@ async def chat_rag(
             prompt = build_prompt_from_messages(chat_req.messages, _tokenizer, SHOW_INTERNAL_THINKING, True, context)
 
             # Cargar modelo con parametros especificados
-            sampling = build_model_params(chat_req.params, chat_req.max_tokens or 2048)
+            sampling = build_model_params(chat_req.params, chat_req.max_tokens)
 
             outputs = llm.generate(prompts=[prompt], sampling_params=sampling)
             text = outputs[0].outputs[0].text
@@ -218,7 +254,13 @@ async def chat_rag(
         
         # Si no hay chat, solo confirmar que se indexaron los archivos
         else:
-            return {"status": "ok", "indexed": True, "files": saved_files}
+            return {
+                "status": "ok", 
+                "indexed": True, 
+                "doc_files": saved_files,
+                "web_files": web_files,
+                "mode": "docs+internet" if (uploads and internet) else ("internet" if internet else "docs")
+            }
     # Utilizar modo asincrónico para testing o evitar bloqueos de la API
     else:
         background.add_task(_task_reindex)
@@ -227,7 +269,9 @@ async def chat_rag(
             return {
                 "status": "accepted",
                 "indexed": "in_progress",
-                "files": saved_files,
+                "doc_files": saved_files,
+                "web_files": web_files,
+                "mode": "docs+internet" if (uploads and internet) else ("internet" if internet else "docs"),
                 "warning": "Reintenta el chat cuando termine el reindex o usa sync=true."
             }
         else:

@@ -24,7 +24,13 @@ def build_prompt_from_messages(messages, tokenizer, internal_thinking, using_rag
             "Eres un asistente con RAG. Usa EXCLUSIVAMENTE el siguiente contexto para responder. "
             "Si no hay información suficiente en el contexto, responde: "
             "\"No encontré suficiente información en la base de conocimiento local.\" "
-            "Cita fragmentos relevantes con [doc:...|chunk:...] cuando corresponda.\n\n"
+            "REQUISITOS DE CITADO (OBLIGATORIO):\n"
+            "- Para documentos locales usa: [doc:{nombre}|chunk:{id}|score:{s}]\n"
+            "- Para páginas web usa: [site:{url}|chunk:{id}|score:{s}]\n"
+            "- Incluye SIEMPRE al menos una cita para cada punto clave o afirmación factual que hagas.\n"
+            "- Coloca la(s) cita(s) al final de la frase o bullet correspondiente.\n"
+            "- PROHIBIDO usar referencias numéricas, notas o footnotes (p. ej. [1], [2], [CONTEXTO][1]).\n"
+            "- NO inventes URLs y NO uses ningún otro formato de cita.\n\n"
             f"### CONTEXTO\n{context}\n### FIN CONTEXTO"
         )
 
