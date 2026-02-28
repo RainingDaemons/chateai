@@ -160,6 +160,10 @@ body {
     color: var(--text-primary);
 }
 
+#settings #toggles .tgl-item{
+    @apply flex justify-between items-center mb-2;
+}
+
 /* Search */
 #search {
     background-color: var(--bg-sidebar);

@@ -18,7 +18,7 @@ const MessageBar = () => {
     const visibleFiles = createMemo(() => files().slice(0, MAX_VISIBLE));
     const hiddenFiles = createMemo(() => files().slice(MAX_VISIBLE));
     const hiddenCount = createMemo(() => Math.max(0, files().length - MAX_VISIBLE));
-    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs, ragEnabled, setRagEnabled } = useProv();
+    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs, ragEnabled, setRagEnabled, netEnabled, setNetEnabled } = useProv();
 
     // Texto y estados
     const formatText = (text) => {
@@ -91,10 +91,12 @@ const MessageBar = () => {
 
         let apiUrl = "";
         const isRag = ragEnabled();
-        if (isRag) {
+        const isNetConn = netEnabled();
+        const usingRagEndpoint = isRag || isNetConn;
+        if (usingRagEndpoint) {
             apiUrl = "http://127.0.0.1:8000/v1/chat/rag";
-            if (files().length === 0) {
-                alert("Error: Adjunta al menos un archivo en el modo RAG.");
+            if (isRag && files().length === 0) {
+                alert("Error: Adjunta al menos un archivo.");
                 return;
             }
         } else {
@@ -105,9 +107,9 @@ const MessageBar = () => {
         try {
             const llmParams = getLlmParams();
 
-            // Al utilizar modo RAG enviar archivos como multipart/form-data
+            // Subida de archivos y busqueda web utilizan mismo endpoint
             let apiRes;
-            if (isRag) {
+            if (usingRagEndpoint) {
                 const form = new FormData();
 
                 // El campo "chat" es un json que contiene el mensaje y params
@@ -118,8 +120,14 @@ const MessageBar = () => {
                 form.append("chat", JSON.stringify(chatObj));
                 form.append("sync", "true");
 
-                // Adjuntar archivos al form-data
-                files().forEach((f) => form.append("file0", f));
+                // Al utilizar modo RAG enviar archivos como multipart/form-data
+                if (isRag) {
+                    files().forEach((f) => form.append("file0", f));
+                }
+                // Al utilizar busqueda web agregar campo en form
+                if (isNetConn) {
+                    form.append("internet", "true");
+                }
 
                 apiRes = await fetch(apiUrl, {
                     method: "POST",
@@ -303,6 +311,8 @@ const MessageBar = () => {
                     <SettingsMenu 
                         ragEnabled={ragEnabled}
                         setRagEnabled={setRagEnabled}
+                        netEnabled={netEnabled}
+                        setNetEnabled={setNetEnabled}
                     />
                 </div>
                 <input

@@ -76,35 +76,65 @@ const SettingsMenu = (props) => {
                     <div class="px-4 py-3 text-sm">
                         <p class="font-semibold mb-2">Configuración</p>
 
-                        {/* Toggle para Modo RAG */}
-                        <div class="flex justify-between items-center">
-                            <span>Modo RAG</span>
-                            <Switch
-                                id="rag-switch"
-                                checked={props.ragEnabled()}
-                                onChange={props.setRagEnabled}
-                                onClick={(e) => e.stopPropagation()}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                class="group inline-flex items-center outline-none"
-                            >
-                                <Switch.Control
-                                    class={`
-                                        relative w-11 h-6 rounded-full transition-colors
-                                        bg-gray-600
-                                        data-[checked]:bg-blue-600
-                                        focus-visible:ring-2 focus-visible:ring-blue-500/50
-                                    `}
+                        {/* Toggles */}
+                        <div class="flex flex-col" id="toggles">
+                            <div class="tgl-item">
+                                <span>Subida de archivos</span>
+                                <Switch
+                                    checked={props.ragEnabled()}
+                                    onChange={props.setRagEnabled}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    class="group inline-flex items-center outline-none"
                                 >
-                                    <Switch.Thumb
+                                    <Switch.Control
                                         class={`
-                                            absolute top-[2px] left-[2px]
-                                            w-5 h-5 rounded-full bg-white shadow
-                                            transition-transform
-                                            group-data-[checked]:translate-x-5
+                                            relative w-11 h-6 rounded-full transition-colors
+                                            bg-gray-600
+                                            data-[checked]:bg-blue-600
+                                            focus-visible:ring-2 focus-visible:ring-blue-500/50
                                         `}
-                                    />
-                                </Switch.Control>
-                            </Switch>
+                                    >
+                                        <Switch.Thumb
+                                            class={`
+                                                absolute top-[2px] left-[2px]
+                                                w-5 h-5 rounded-full bg-white shadow
+                                                transition-transform
+                                                group-data-[checked]:translate-x-5
+                                            `}
+                                        />
+                                    </Switch.Control>
+                                </Switch>
+                            </div>
+                            
+                            <div class="tgl-item">
+                                <span>Búsqueda web</span>
+                                <Switch
+                                    checked={props.netEnabled()}
+                                    onChange={props.setNetEnabled}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    class="group inline-flex items-center outline-none"
+                                >
+                                    <Switch.Control
+                                        class={`
+                                            relative w-11 h-6 rounded-full transition-colors
+                                            bg-gray-600
+                                            data-[checked]:bg-blue-600
+                                            focus-visible:ring-2 focus-visible:ring-blue-500/50
+                                        `}
+                                    >
+                                        <Switch.Thumb
+                                            class={`
+                                                absolute top-[2px] left-[2px]
+                                                w-5 h-5 rounded-full bg-white shadow
+                                                transition-transform
+                                                group-data-[checked]:translate-x-5
+                                            `}
+                                        />
+                                    </Switch.Control>
+                                </Switch>
+                            </div>
                         </div>
                     </div>
                 </DropdownMenu.Content>

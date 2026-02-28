@@ -39,6 +39,7 @@ const Provider = (props) => {
     const [theme, setTheme] = createSignal(initTheme);
     const [llmConn, setLlmConn] = createSignal(null);
     const [ragEnabled, setRagEnabled] = createSignal(false);
+    const [netEnabled, setNetEnabled] = createSignal(false);
     const [docsDir, setDocsDir] = createSignal(null);
 
     // Función para alternar tema
@@ -142,6 +143,7 @@ const Provider = (props) => {
         theme, toggleTheme,
         llmConn,
         ragEnabled, setRagEnabled,
+        netEnabled, setNetEnabled,
         docsDir, setDocsDir
     };
 

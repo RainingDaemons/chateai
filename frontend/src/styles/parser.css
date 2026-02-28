@@ -60,7 +60,7 @@
 }
 
 /* Enlaces */
-.markdown-item .rag-local-link {
+.markdown-item .rag-doc-link, .markdown-item .rag-site-link  {
     color: var(--md-emphasis);
 }
 
