@@ -7,6 +7,7 @@
     --bg-input: #f5efe6;
     --bg-hover: #ebe5dc;
     --bg-active: #d9d0c3;
+    --bg-progress-track: #a09c95;
     --border-color: #d4c9ba;
     --text-primary: #3d3229;
     --text-secondary: #7a6f63;
@@ -25,6 +26,7 @@
     --bg-input: #1a1a1a;
     --bg-hover: #1a1a1a;
     --bg-active: #252525;
+    --bg-progress-track: #3d3c39;
     --border-color: #27272a;
     --text-primary: #e4e4e7;
     --text-secondary: #71717a;
@@ -239,6 +241,10 @@ body {
     &:hover {
         color: var(--text-primary);
     }
+}
+
+#api-progress-bar #progress-track{
+    background-color: var(--bg-progress-track);
 }
 
 /* Scrollbar */

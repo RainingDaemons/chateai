@@ -155,6 +155,7 @@ const ApiConsumptionBar = (props) => {
             maxValue={maxVal}
             getValueLabel={({ value, max }) => `${max - value} Peticiones diarias disponibles`}
             class="w-60 mr-auto mb-2"
+            id="api-progress-bar"
         >
             <div class="flex items-center justify-between text-sm">
                 <Progress.ValueLabel class="progress__value-label" />
@@ -162,9 +163,10 @@ const ApiConsumptionBar = (props) => {
             <Progress.Track 
                 class="
                     relative h-2 w-full overflow-hidden
-                    rounded-md bg-neutral-700/80
+                    rounded-md
                     ring-1 ring-black/10
                 "
+                id="progress-track"
             >
                 <Progress.Fill 
                     class="
@@ -315,9 +317,9 @@ const CreditsModal = (props) => {
     return (
         <Dialog open={props.open} onOpenChange={props.onOpenChange}>
             <Dialog.Portal>
-                <Dialog.Overlay class="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+                <Dialog.Overlay class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110]" />
 
-                <div class="fixed inset-0 flex items-start justify-center mt-20">
+                <div class="fixed inset-0 flex items-start justify-center mt-20 z-[110]">
                     <Dialog.Content
                         class="w-full max-w-lg rounded-xl shadow-xl border"
                         id="credits"
