@@ -1,5 +1,6 @@
 import os, time, uuid, threading, json
 
+from contextlib import asynccontextmanager
 from vllm import LLM
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Form, BackgroundTasks, HTTPException
@@ -7,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.schemas import Message, ChatRequest, ChatChoice, ChatResponse
 from server.utils import build_prompt_from_messages, build_model_params
+from server.rate_limit import ApiUsageTracker, RateLimiter
 from rag.rag_retriever import RAGRetriever, build_context
 from rag.rag_indexer import RAGIndexer
 from rag.internet_search import get_webpages
@@ -32,8 +34,22 @@ WEB_DIR = os.getenv("WEB_DIR")
 LS_API_URL = os.getenv("LANGSEARCH_API_URL")
 LS_API_KEY = os.getenv("LANGSEARCH_API_KEY")
 
+LS_DB_PATH = os.getenv("LANGSEARCH_DB_PATH")
+LS_QPS = 1
+LS_QPM = 60
+LS_QPD = 1000
+
+ls_usage_tracker = ApiUsageTracker(LS_DB_PATH)
+ls_rate_limiter = RateLimiter(ls_usage_tracker, LS_QPS, LS_QPM, LS_QPD)
+
+# Rate limiter DB check
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ls_usage_tracker.check_rollover()
+    yield
+
 # Server init
-app = FastAPI(title="vLLM API")
+app = FastAPI(lifespan=lifespan, title="vLLM API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins="http://wails.localhost:34115",
@@ -189,7 +205,12 @@ async def chat_rag(
             )
 
         try:
-            web_files = get_webpages(search_query, WEB_DIR, LS_API_URL, LS_API_KEY)
+            web_files = get_webpages(search_query, ls_rate_limiter, WEB_DIR, LS_API_URL, LS_API_KEY)
+        except RuntimeError as e:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Rate limit alcanzado: {str(e)}"
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=500,
@@ -276,3 +297,11 @@ async def chat_rag(
             }
         else:
             return {"status": "accepted", "indexed": "in_progress", "files": saved_files}
+
+@app.get("/v1/langsearch/status")
+def get_langsearch_state():
+    count, date = ls_usage_tracker.get_today_count()
+    return {
+        "date": date,
+        "count": count,
+    }

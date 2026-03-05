@@ -3,7 +3,7 @@ import { createSignal, createMemo, Show, For } from "solid-js";
 import { DBCreateConversation, DBCreateMessage } from "../../wailsjs/go/main/App";
 import { getLlmParams } from '../helpers/Utils';
 import { useProv } from "../helpers/Provider";
-import { SettingsMenu } from '../ui/Components';
+import { SettingsMenu, ApiConsumptionBar } from '../ui/Components';
 
 import SendIcon from "../icons/send.svg";
 import LoadingIcon from "../icons/loading.svg";
@@ -18,7 +18,7 @@ const MessageBar = () => {
     const visibleFiles = createMemo(() => files().slice(0, MAX_VISIBLE));
     const hiddenFiles = createMemo(() => files().slice(MAX_VISIBLE));
     const hiddenCount = createMemo(() => Math.max(0, files().length - MAX_VISIBLE));
-    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs, ragEnabled, setRagEnabled, netEnabled, setNetEnabled } = useProv();
+    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs, ragEnabled, setRagEnabled, netEnabled, setNetEnabled, lsConsumption, incLsOptimistic, updateLSCount } = useProv();
 
     // Texto y estados
     const formatText = (text) => {
@@ -188,6 +188,10 @@ const MessageBar = () => {
             await dbSaveMessage(actualID, llmMessage.role, llmMessage.content);
 
             // Actualizar listado de conversaciones y mensajes
+            if (isNetConn) {
+                await updateLSCount();
+            }
+
             setConvID(actualID);
             await updateConvs();
             await updateMsgs();
@@ -216,6 +220,11 @@ const MessageBar = () => {
             id='message-send'
         >
             {/* Input de archivos solo en modo RAG */}
+            <Show when={netEnabled()}>
+                <ApiConsumptionBar
+                    actualVal={lsConsumption}
+                />
+            </Show>
             <Show when={ragEnabled()}>
                 <div 
                     class="flex items-center gap-2 mb-2"

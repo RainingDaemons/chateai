@@ -99,8 +99,10 @@ def create_md(url, title, snippet, summary):
   body_text = body_text if body_text else "(sin contenido disponible)"
   return fm + body_text + "\n"
 
-def get_webpages(query, WEB_DIR, API_URL, API_KEY):
+def get_webpages(query, rate_limiter, WEB_DIR, API_URL, API_KEY):
   os.makedirs(WEB_DIR, exist_ok=True)
+
+  rate_limiter.check_usage()
 
   results = call_api(query, API_URL, API_KEY)
 

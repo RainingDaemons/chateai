@@ -7,7 +7,7 @@ import MessageBar from '../components/MessageBar.jsx';
 import "../styles/parser.css";
 
 const Chat = () => {
-    const { convID, chat, setChat, ragEnabled, docsDir } = useProv();
+    const { convID, chat, setChat, ragEnabled, netEnabled, docsDir } = useProv();
 
     // Database
     const dbLoadChat = async (newID) => {
@@ -105,7 +105,8 @@ const Chat = () => {
                         <div
                             class={`
                                 flex-1 overflow-y-auto px-4
-                                ${ragEnabled() ? 'pb-24' : 'pb-16'}
+                                ${ragEnabled() || netEnabled() ? 'pb-24' : 'pb-16'}
+                                ${ragEnabled() && netEnabled() ? 'pb-34' : 'pb-16'}
                             `}
                             id='chat-list'
                         >

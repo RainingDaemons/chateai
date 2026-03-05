@@ -1,6 +1,7 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Dialog } from "@kobalte/core/dialog";
 import { Switch } from "@kobalte/core/switch";
+import { Progress } from "@kobalte/core/progress";
 import { Toast, toaster } from "@kobalte/core";
 import { createSignal, createMemo } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -140,6 +141,40 @@ const SettingsMenu = (props) => {
                 </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu>
+    );
+}
+
+const ApiConsumptionBar = (props) => {
+    let minVal = 0;
+    let maxVal = 1000;
+
+    return (
+        <Progress
+            value={props.actualVal()}
+            minValue={minVal}
+            maxValue={maxVal}
+            getValueLabel={({ value, max }) => `${max - value} Peticiones diarias disponibles`}
+            class="w-60 mr-auto mb-2"
+        >
+            <div class="flex items-center justify-between text-sm">
+                <Progress.ValueLabel class="progress__value-label" />
+            </div>
+            <Progress.Track 
+                class="
+                    relative h-2 w-full overflow-hidden
+                    rounded-md bg-neutral-700/80
+                    ring-1 ring-black/10
+                "
+            >
+                <Progress.Fill 
+                    class="
+                        h-full bg-blue-500
+                        transition-[width] duration-300 ease-out
+                    "
+                    style={{ width: "var(--kb-progress-fill-width)" }}
+                />
+            </Progress.Track>
+        </Progress>
     );
 }
 
@@ -401,4 +436,4 @@ const ConnectionToast = ({ title, description, duration, variation } = {}) => {
     ));
 }
 
-export { OptionsMenu, SettingsMenu, SearchModal, CreditsModal, ToastHost, ConnectionToast };
+export { OptionsMenu, SettingsMenu, ApiConsumptionBar, SearchModal, CreditsModal, ToastHost, ConnectionToast };

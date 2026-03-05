@@ -15,10 +15,11 @@ type Core struct {
     msgRepo  *repository.MessageRep
 }
 
-func NewApp(convRepo *repository.ConversationRep, msgRepo *repository.MessageRep) *Core {
+func NewApp(convRepo *repository.ConversationRep, 
+    msgRepo *repository.MessageRep) *Core {
 	return &Core{
 		convRepo: convRepo,
-        msgRepo:  msgRepo,
+        msgRepo: msgRepo,
 	}
 }
 

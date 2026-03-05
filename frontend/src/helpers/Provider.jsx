@@ -41,6 +41,7 @@ const Provider = (props) => {
     const [ragEnabled, setRagEnabled] = createSignal(false);
     const [netEnabled, setNetEnabled] = createSignal(false);
     const [docsDir, setDocsDir] = createSignal(null);
+    const [lsConsumption, setLsConsumption] = createSignal(0);
 
     // Función para alternar tema
     const toggleTheme = () => {
@@ -81,6 +82,21 @@ const Provider = (props) => {
         }
     }
 
+    // Función para cargar peticiones realizadas a Langsearch
+    const updateLSCount = async () => {
+        try {
+            let apiUrl = "http://127.0.0.1:8000/v1/langsearch/status";
+            let apiRes = await fetch(apiUrl, {
+                method: "GET",
+            });
+            const data = await apiRes.json();
+            setLsConsumption(data.count ?? 0);
+        } catch (e) {
+            console.error("Error: No se puede obtener el consumo realizado a langsearch:", e);
+            setLsConsumption(0);
+        }
+    };
+
     // Función para verificar conexión con el LLM
     const pingLlm = async () => {
         try {
@@ -113,6 +129,7 @@ const Provider = (props) => {
             if (okConn) {
                 updateConvs();
                 updateMsgs();
+                updateLSCount();
             }
             const path = await GetDocsDir();
             setDocsDir(path);
@@ -144,7 +161,8 @@ const Provider = (props) => {
         llmConn,
         ragEnabled, setRagEnabled,
         netEnabled, setNetEnabled,
-        docsDir, setDocsDir
+        docsDir, setDocsDir,
+        lsConsumption, updateLSCount
     };
 
     return (
