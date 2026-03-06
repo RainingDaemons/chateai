@@ -43,6 +43,8 @@ If you are going to use the RAG feature, download first the recommended embeddin
 python setup.py
 ```
 
+If you are going to use the internet browse feature, you need to setup at least a free account in [Langsearch](https://langsearch.com//) and generate an api key, inside `/models` folder change LANGSEARCH_API_KEY var in `.env` file
+
 # Requirements
 
 - [Git](https://git-scm.com/) installed and accessible in your terminal
@@ -65,9 +67,10 @@ Note:
 | Storage | 🟢 | Store conversations in local database |
 | Search | 🟢 | Find messages in conversations history |
 | RAG | 🟢 | Documents context for conversations |
+| Internet browse | 🟢 | Internet context for conversations |
 | Finetuning | 🟢 | Finetune LLMs messages (temperature, repetition, etc.) |
 | Markdown support | 🟡 | Markdown formatting for LLMs messages |
-| Light/Dark Mode | 🟢 | Customizable visual experience with Light and Dark themes |
+| Light/Dark mode | 🟢 | Customizable visual experience with Light and Dark themes |
 | Custom options | 🔴 | Customizable app options |
 
 🟢 Supported &nbsp;&nbsp; 🟡 In Development &nbsp;&nbsp; 🔴 Planned
