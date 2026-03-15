@@ -2,17 +2,19 @@ import { createSignal, createEffect, on } from 'solid-js';
 import { DBDeleteConversation, DBUpdateConversationName } from "../../wailsjs/go/main/App";
 
 import { useProv } from "../helpers/Provider";
-import { OptionsMenu, SearchModal, CreditsModal } from '../ui/Components';
+import { OptionsMenu, SearchModal, CreditsModal, UserSettingsModal } from '../ui/Components';
 
 import Logo from "../icons/logo.svg";
 import SearchIcon from "../icons/search.svg";
 import WriteIcon from "../icons/write.svg";
+import SettingsIcon from "../icons/settings2.svg";
 import SunIcon from "../icons/sun.svg";
 import MoonIcon from "../icons/moon.svg";
 
 const Conversations = () => {
     const [openModal, setOpenModal] = createSignal(false);
     const [openCredits, setOpenCredits] = createSignal(false);
+    const [openUserSettings, setOpenUserSettings] = createSignal(false);
     const { convID, setConvID, clearChat, convs, updateConvs, msgs, updateMsgs, theme, toggleTheme, llmConn } = useProv();
 
     // Dropdown menu options
@@ -64,7 +66,7 @@ const Conversations = () => {
     );
 
     return (
-        <>
+        <div class="flex h-full flex-col">
             <SearchModal
                 messages={msgs()}
                 open={openModal()}
@@ -74,6 +76,10 @@ const Conversations = () => {
                 open={openCredits()}
                 onOpenChange={setOpenCredits}
             />
+            <UserSettingsModal
+                open={openUserSettings()}
+                onOpenChange={setOpenUserSettings}
+            />
             <div
                 class='ml-1'
                 id="logo"
@@ -82,25 +88,23 @@ const Conversations = () => {
                 <Logo class="w-40 h-auto" />
             </div>
             <div class="pt-8" id="buttons">
-                <div class="flex px-2 py-2 cursor-pointer border border-transparent rounded-lg">
+                <div 
+                    onClick={(e) => clearChat()}
+                    class="button-itm"
+                >
                     <WriteIcon class="w-6 h-6 mr-2" />
-                    <span
-                        onClick={(e) => clearChat()}
-                        class="text-md"
-                    >
-                        Nuevo chat
-                    </span>
+                    <span class="text-md">Nuevo chat</span>
                 </div>
                 <div
                     onclick={() => setOpenModal(true)}
-                    class="flex px-2 py-2 cursor-pointer border border-transparent rounded-lg"
+                    class="button-itm"
                 >
                     <SearchIcon class="w-6 h-6 mr-2" />
                     <span class="text-md">Buscar chats</span>
                 </div>
                 <div
                     onclick={() => toggleTheme()}
-                    class="flex px-2 py-2 cursor-pointer border border-transparent rounded-lg"
+                    class="button-itm"
                 >
                     {theme() === 'dark' ? (
                         <SunIcon class="w-6 h-6 mr-2" />
@@ -119,7 +123,7 @@ const Conversations = () => {
                         {convs().map((msg, index) => (
                             <div
                                 title={msg.name}
-                                class="flex px-2 py-2 cursor-pointer border border-transparent rounded-lg"
+                                class="button-itm"
                                 classList={{
                                     "active": msg.id === convID()
                                 }}
@@ -140,7 +144,21 @@ const Conversations = () => {
                     </div>
                 )}
             </div>
-        </>
+
+            <div class='pt-4 mt-auto'>
+                <div 
+                    class="button-itm"
+                >
+                    <SettingsIcon class="w-6 h-6 mr-2" />
+                    <span
+                        onClick={() => setOpenUserSettings(true)}
+                        class="text-md"
+                    >
+                        Configuración
+                    </span>
+                </div>
+            </div>
+        </div>
     );
 };
 

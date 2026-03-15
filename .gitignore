@@ -8,4 +8,5 @@ models/**
 data/**
 .env
 .pyc
+*.bak
 __pycache__

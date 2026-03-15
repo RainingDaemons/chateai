@@ -9,11 +9,13 @@
     --bg-active: #d9d0c3;
     --bg-progress-track: #a09c95;
     --border-color: #d4c9ba;
+    --border-color2: #7e6958;
     --text-primary: #3d3229;
     --text-secondary: #7a6f63;
     --scrollbar: #c9bfb0;
     --msg-user-bg: #c2956e;
     --msg-user-bg2: #e6b285;
+    --msg-user-bg3: #ceac8e;
     --msg-user-files: #c48650;
     --msg-user-text: #ffffff;
     --msg-llm-bg: #f0e8dd;
@@ -28,11 +30,13 @@
     --bg-active: #252525;
     --bg-progress-track: #3d3c39;
     --border-color: #27272a;
+    --border-color2: #bdbdbd;
     --text-primary: #e4e4e7;
     --text-secondary: #71717a;
     --scrollbar: #2a2a2a;
     --msg-user-bg: #2563eb;
     --msg-user-bg2: #3f3f3f;
+    --msg-user-bg3:#4E7BDE;
     --msg-user-files: #232e47;
     --msg-user-text: #ffffff;
     --msg-llm-bg: #4b5563;
@@ -54,7 +58,8 @@ body {
     color: var(--text-primary);
 }
 
-#conversations #buttons div, #conversations #chat-list div{
+#conversations .button-itm{
+    @apply flex px-2 py-2 cursor-pointer border border-transparent rounded-lg;
     &:hover {
         background-color: var(--bg-hover);
     }
@@ -62,6 +67,12 @@ body {
 
 #conversations #chat-list div.active{
     background-color: var(--bg-active);
+    &:hover {
+        background-color: var(--bg-hover);
+    }
+}
+
+#conversations #user-settings{
     &:hover {
         background-color: var(--bg-hover);
     }
@@ -219,6 +230,104 @@ body {
 }
 
 #credits .close-btn{
+    @apply cursor-pointer;
+    color: var(--text-secondary);
+    &:hover {
+        color: var(--text-primary);
+    }
+}
+
+/* User Settings */
+#user-settings {
+    color: var(--text-primary);
+    background-color: var(--bg-sidebar);
+    border-color: var(--border-color);
+}
+
+#user-settings #user-settings-title {
+    border-bottom: 1px solid var(--border-color);
+}
+
+#user-settings #user-settings-body {
+    color: var(--text-secondary);
+}
+
+#user-settings #user-settings-body #options {
+    @apply rounded-bl-lg;
+    background-color: var(--bg-sidebar);
+}
+
+#user-settings #user-settings-body #content {
+    @apply rounded-br-lg;
+    background-color: var(--bg-input);
+}
+
+#user-settings .button-itm{
+    @apply flex px-2 py-2 cursor-pointer border border-transparent rounded-lg;
+    &:hover {
+        background-color: var(--bg-hover);
+    }
+}
+
+#user-settings .button-itm.active{
+    background-color: var(--bg-active);
+    &:hover {
+        background-color: var(--bg-hover);
+    }
+}
+
+#user-settings #grid-options{
+    color: var(--text-primary);
+}
+
+#user-settings #grid-options label{
+    @apply self-center;
+}
+
+#user-settings #grid-options input[type="text"],
+#user-settings #grid-options input[type="number"]{
+    border-color: var(--border-color2);
+    @apply px-2 py-1 w-80 border border-1 rounded-md;
+}
+
+#user-settings #grid-options input[type="checkbox"]{
+    @apply self-center mr-auto;
+}
+
+#user-settings #grid-options textarea{
+    border-color: var(--border-color2);
+    @apply px-2 py-1 w-full border border-1 rounded-md;
+}
+
+#user-settings .chips-itm{
+    color: var(--text-primary);
+    @apply w-full flex items-center gap-2 mt-2;
+}
+
+#user-settings .chips-itm .chip{
+    background-color: var(--msg-user-bg);
+    @apply px-2 py-1 w-fit border border-transparent rounded-md;
+}
+
+#user-settings .chips-itm .chip-x{
+    @apply text-red-500 hover:text-red-300 ml-2;
+}
+
+#user-settings .chips-itm .chip-add{
+    color: var(--text-primary);
+    background-color: var(--msg-user-files);
+    @apply px-2 py-1 border border-transparent rounded-md;
+}
+
+#user-settings .save-btn{
+    @apply flex px-2 py-2 mt-auto cursor-pointer border border-transparent rounded-lg;
+    background-color: var(--msg-user-bg);
+    &:hover {
+        background-color: var(--msg-user-bg3);
+    }
+}
+
+#user-settings .close-btn{
     @apply cursor-pointer;
     color: var(--text-secondary);
     &:hover {

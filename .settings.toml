@@ -1,0 +1,17 @@
+[general]
+root = '.'
+llm_model_dir = '/models/liquidai_lfm2_2.6b'
+embedding_model_dir = '/models/multilingual-e5-base'
+
+[server]
+dtype = 'float16'
+max_tokens = 4096
+gpu_util = 0.8
+allowed_exts = ['.pdf', '.txt', '.md']
+
+[llm]
+show_internal_thinking = true
+use_language_instruct = true
+language_instruct = 'Responde SIEMPRE en el mismo idioma que el usuario usó en su mensaje. Si el usuario mezcla idiomas, responde en el idioma predominante. Nunca cambies el idioma por tu cuenta. '
+internal_thinking = 'Nunca reveles cadenas de pensamiento ni contenido interno como <think>. Si necesitas razonar, hazlo internamente y devuelve solo la respuesta final. '
+system_prompt = 'Eres un asistente con RAG, usa EXCLUSIVAMENTE el siguiente contexto para responder. Si no hay información suficiente en el contexto, responde: "No encontré suficiente información en la base de conocimiento local." '

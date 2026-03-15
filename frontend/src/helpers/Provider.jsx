@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'solid-js';
 import { createSignal, createEffect, onMount } from 'solid-js';
-import { DBGetAllConversations, DBGetAllMessages, GetDocsDir } from "../../wailsjs/go/main/App";
+import { DBGetAllConversations, DBGetAllMessages, GetDocsDir, GetUserSettings } from "../../wailsjs/go/main/App";
 
 import { fetchWithTimeout } from '../helpers/Utils';
 
@@ -42,6 +42,7 @@ const Provider = (props) => {
     const [netEnabled, setNetEnabled] = createSignal(false);
     const [docsDir, setDocsDir] = createSignal(null);
     const [lsConsumption, setLsConsumption] = createSignal(0);
+    const [userSettings, setUserSettings] = createSignal([]);
 
     // Función para alternar tema
     const toggleTheme = () => {
@@ -122,6 +123,16 @@ const Provider = (props) => {
         }
     }
 
+    const loadUserSettings = async () => {
+        try {
+            const settings = await GetUserSettings();
+            setUserSettings(settings ?? []);
+        } catch (e) {
+            console.log("Error: No se ha podido obtener el listado de mensajes");
+            setUserSettings([]);
+        }
+    }
+
     // Carga inicial de conversaciones y directorio data/docs
     onMount(async () => {
         try {
@@ -133,6 +144,7 @@ const Provider = (props) => {
             }
             const path = await GetDocsDir();
             setDocsDir(path);
+            await loadUserSettings();
         } catch (e) {
             console.error('No se pudo obtener docsDir:', e);
             setDocsDir(null);
@@ -162,7 +174,8 @@ const Provider = (props) => {
         ragEnabled, setRagEnabled,
         netEnabled, setNetEnabled,
         docsDir, setDocsDir,
-        lsConsumption, updateLSCount
+        lsConsumption, updateLSCount,
+        userSettings, setUserSettings
     };
 
     return (

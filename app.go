@@ -12,10 +12,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
-	"chateai/backend"
+	backend "chateai/backend"
 	db "chateai/backend/database"
 	"chateai/backend/repository"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 // App struct
@@ -26,13 +29,9 @@ type App struct {
 	convRepo *repository.ConversationRep
 	msgRepo  *repository.MessageRep
 	docsBase string
-}
-
-// File struct
-type FilePayload struct {
-	Name       string `json:"name"`
-	Mime       string `json:"mime"`
-	DataBase64 string `json:"dataBase64"`
+	mu   	 sync.RWMutex
+    cfg  	 backend.UserSettings
+	cfgPath  string
 }
 
 /*
@@ -47,12 +46,26 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	dbPath := "./data/data.db"
-
 	// Asegurar que el directorio exista
+	dbPath := "./data/data.db"
 	if err := ensureDir(filepath.Dir(dbPath)); err != nil {
 		log.Fatal("[!] No se pudo crear el directorio de datos: ", err)
 	}
+
+	// Cargar configuración del usuario
+	a.cfgPath = ".settings.toml"
+	if err := ensureDir(filepath.Dir(a.cfgPath)); err != nil {
+		log.Fatal("[!] No se pudo crear el directorio de datos: ", err)
+	}
+
+	if !fileExists(a.cfgPath) {
+        log.Printf("[!] No se encontró archivo de configuración: %s", a.cfgPath)
+        return
+    }
+
+	if err := a.loadUserSettings(); err != nil {
+        log.Printf("[!] Error cargando config: %v", err)
+    }
 
 	// Cargar BD
 	sqliteDB, err := db.Connect(dbPath)
@@ -73,7 +86,7 @@ func (a *App) startup(ctx context.Context) {
 }
 
 // domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {
+func (a *App) domReady(ctx context.Context) {
 	// Add your action here
 }
 
@@ -109,7 +122,19 @@ func ensureDir(dir string) error {
 // Get info for some directory existence
 func dirExists(p string) bool {
 	info, err := os.Stat(p)
-	return err == nil && info.IsDir()
+	if err != nil {
+        return false
+    }
+	return info.IsDir()
+}
+
+// Get info for some file existence
+func fileExists(p string) bool {
+    info, err := os.Stat(p)
+    if err != nil {
+        return false
+    }
+    return info.Mode().IsRegular()
 }
 
 // Get source directory
@@ -189,7 +214,7 @@ func (a *App) isPathAllowed(abs string) bool {
 }
 
 // Read local files
-func (a *App) ReadLocalFile(path string) (*FilePayload, error) {
+func (a *App) ReadLocalFile(path string) (*backend.FilePayload, error) {
 	if path == "" {
 		return nil, errors.New("ruta vacía")
 	}
@@ -221,7 +246,7 @@ func (a *App) ReadLocalFile(path string) (*FilePayload, error) {
 		m = "application/octet-stream"
 	}
 
-	return &FilePayload{
+	return &backend.FilePayload{
 		Name:       info.Name(),
 		Mime:       m,
 		DataBase64: base64.StdEncoding.EncodeToString(b),
@@ -229,10 +254,162 @@ func (a *App) ReadLocalFile(path string) (*FilePayload, error) {
 }
 
 /*
-* FRONT UTILS
+* USER SETTINGS
+ */
+func (a *App) loadUserSettings() error {
+    a.mu.Lock()
+    defer a.mu.Unlock()
+
+    b, err := os.ReadFile(a.cfgPath)
+    if err != nil {
+        return err
+    }
+    var c backend.UserSettings
+    if err := toml.Unmarshal(b, &c); err != nil {
+        return err
+    }
+    a.cfg = c
+    return nil
+}
+
+func (a *App) validateUSPatch(p backend.UserSettingsPatch) (backend.UserSettings, []error) {
+    candidate := a.cfg
+    var verrs []error
+
+	// Validaciones general
+	if p.General != nil {
+		if p.General.Root != nil {
+            candidate.General.Root = *p.General.Root
+        }
+        if p.General.LLMModelDir != nil {
+            candidate.General.LLMModelDir = *p.General.LLMModelDir
+        }
+        if p.General.EmbeddingModelDir != nil {
+            candidate.General.EmbeddingModelDir = *p.General.EmbeddingModelDir
+        }
+    }
+
+    // Validaciones server
+    if p.Server != nil {
+		if p.Server.DType != nil {
+			dtype := strings.TrimSpace(*p.Server.DType)
+			if dtype == "" {
+                verrs = append(verrs, fmt.Errorf("[!] UserSettings: dtype no puede ser vacío"))
+            } else {
+				candidate.Server.DType = dtype
+			}
+        }
+        if p.Server.MaxTokens != nil {
+            if *p.Server.MaxTokens <= 0 {
+                verrs = append(verrs, fmt.Errorf("[!] UserSettings: max_tokens inválido"))
+            } else {
+				candidate.Server.MaxTokens = *p.Server.MaxTokens
+			}	
+        }
+        if p.Server.GPUUtil != nil {
+            gu := *p.Server.GPUUtil
+            if gu < 0 || gu > 1 {
+                verrs = append(verrs, fmt.Errorf("[!] UserSettings: gpu_util debe estar entre 0 y 1"))
+            } else {
+				candidate.Server.GPUUtil = gu
+			}
+        }
+        if p.Server.AllowedExts != nil {
+            ok := true
+            for _, ext := range p.Server.AllowedExts {
+                if len(ext) == 0 || ext[0] != '.' {
+                    ok = false
+                    break
+                }
+            }
+            if !ok {
+                verrs = append(verrs, fmt.Errorf("[!] UserSettings: allowed_exts inválido"))
+            } else {
+				candidate.Server.AllowedExts = p.Server.AllowedExts
+			}	
+        }
+    }
+
+	// Validaciones llm
+	if p.LLM != nil {
+        if p.LLM.ShowInternalThinking != nil {
+            candidate.LLM.ShowInternalThinking = *p.LLM.ShowInternalThinking
+        }
+        if p.LLM.UseLanguageInstruct != nil {
+            candidate.LLM.UseLanguageInstruct = *p.LLM.UseLanguageInstruct
+        }
+		if p.LLM.LanguageInstruct != nil {
+            candidate.LLM.LanguageInstruct = *p.LLM.LanguageInstruct
+        }
+		if p.LLM.InternalThinking != nil {
+            candidate.LLM.InternalThinking = *p.LLM.InternalThinking
+        }
+		if p.LLM.SystemPrompt != nil {
+            candidate.LLM.SystemPrompt = *p.LLM.SystemPrompt
+        }
+    }
+
+	return candidate, verrs
+}
+
+func (a *App) saveUserSettings(c backend.UserSettings) error {
+    b, err := toml.Marshal(c)
+    if err != nil {
+        return err
+    }
+
+    // Asegurar directorio por si la ruta cambia
+    if err := ensureDir(filepath.Dir(a.cfgPath)); err != nil {
+        return err
+    }
+
+    // Escribe a archivo temporal y renombra de forma atómica
+    tmp := a.cfgPath + ".tmp"
+    if err := os.WriteFile(tmp, b, 0o600); err != nil {
+        return err
+    }
+    _ = os.Rename(a.cfgPath, a.cfgPath+".bak")
+    return os.Rename(tmp, a.cfgPath)
+}
+
+/*
+* FRONT EXPOSE
  */
 func (a *App) GetDocsDir() (string, error) {
 	return a.getDocsBase()
+}
+
+func (a *App) GetUserSettings() (backend.UserSettings, error) {
+    a.mu.RLock()
+    defer a.mu.RUnlock()
+    return a.cfg, nil
+}
+
+func (a *App) ApplyNewUserSettings(patch backend.UserSettingsPatch) (backend.UserSettings, error) {
+    // Validación y armado del candidate sin aplicar cambios en configuración
+    a.mu.Lock()
+    current := a.cfg
+    a.mu.Unlock()
+
+	candidate, verrs := a.validateUSPatch(patch)
+    if len(verrs) > 0 {
+        for _, e := range verrs {
+            fmt.Println(e)
+        }
+        return current, errors.Join(verrs...)
+    }
+
+	// Aplicar cambios y guardar
+	a.mu.Lock()
+    a.cfg = candidate
+    snapshot := a.cfg
+    a.mu.Unlock()
+
+    if err := a.saveUserSettings(snapshot); err != nil {
+        return backend.UserSettings{}, err
+    }
+
+    return snapshot, nil
 }
 
 /*
