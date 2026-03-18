@@ -218,6 +218,16 @@ jobs:
             echo "ADVERTENCIA: carpeta 'llm' no encontrada en la raíz del repo"
             mkdir -p "$PKG_DIR/llm"
           fi
+
+          # Copiar archivos de configuración
+          for f in "settings.toml" "finetuning.json" ".secrets.example"; do
+            if [[ -f "$f" ]]; then
+              cp "$f" "$PKG_DIR/"
+              echo "Copiado: $f -> $PKG_DIR/"
+            else
+              echo "ADVERTENCIA: '$f' no encontrado en la raíz del repo"
+            fi
+          done
       
       - name: Zip package (Linux/macOS)
         if: runner.os != 'Windows'
