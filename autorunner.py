@@ -26,7 +26,7 @@ def build_docker_command(base_dir, image, host_models_rel, host_data_rel, host_l
     """
     host_models = (base_dir / host_models_rel).resolve()
     host_data = (base_dir / host_data_rel).resolve()
-    host_llm = (base_dir / host_llm_rel).resolve()
+    host_llm = (base_dir).resolve()
 
     ensure_dir(host_models)
     ensure_dir(host_llm)
@@ -38,6 +38,7 @@ def build_docker_command(base_dir, image, host_models_rel, host_data_rel, host_l
         "-v", f"{str(host_models)}:{container_models}",
         "-v", f"{str(host_data)}:{container_data}",
         "-v", f"{str(host_llm)}:{container_llm}",
+        "-w", "/app",
     ]
 
     # Soporte para GPUs

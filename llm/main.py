@@ -1,5 +1,6 @@
-import os, time, uuid, threading, json
+import os, time, uuid, threading, json, tomli
 
+from pathlib import Path
 from contextlib import asynccontextmanager
 from vllm import LLM
 from dotenv import load_dotenv
@@ -13,28 +14,35 @@ from rag.rag_retriever import RAGRetriever, build_context
 from rag.rag_indexer import RAGIndexer
 from rag.internet_search import get_webpages
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+load_dotenv(BASE_DIR / ".secrets")
+
+with open(BASE_DIR / "settings.toml", "rb") as f:
+    config = tomli.load(f)
 
 # Config
-MODEL_DIR = os.getenv("MODEL_DIR")
-MODEL_DATA_TYPE = os.getenv("MODEL_DTYPE")
-MODEL_MAX_TOKENS = int(os.getenv("MODEL_MAX_TOKENS"))
-MODEL_GPU_MAX_THRESHOLD = float(os.getenv("GPU_UTIL"))
-TRUST_REMOTE_CODE = os.getenv("TRUST_REMOTE_CODE")
-SHOW_INTERNAL_THINKING = os.getenv("SHOW_INTERNAL_THINKING")
+MODEL_DIR = config["general"]["llm_model_dir"] # os.getenv("MODEL_DIR")
+RAG_EMBED_MODEL = config["general"]["embedding_model_dir"] # os.getenv("RAG_EMBED_MODEL")
+MODEL_DATA_TYPE = config["server"]["dtype"] # os.getenv("MODEL_DTYPE")
+MODEL_MAX_TOKENS = config["server"]["max_tokens"] # int(os.getenv("MODEL_MAX_TOKENS"))
+MODEL_GPU_MAX_THRESHOLD = config["server"]["gpu_util"] # float(os.getenv("GPU_UTIL"))
+ALLOWED_EXTS = config["server"]["allowed_exts"] # {".pdf", ".txt", ".md"}
+SHOW_INTERNAL_THINKING = config["llm"]["show_internal_thinking"] # os.getenv("SHOW_INTERNAL_THINKING")
+USE_LANGUAGE_INSTRUCT = config["llm"]["use_language_instruct"] # os.getenv("SHOW_INTERNAL_THINKING")
 
-DOCS_DIR = os.getenv("DOCS_DIR")
-RAG_INDEX_PATH = os.getenv("RAG_INDEX_PATH")
-RAG_META_PATH = os.getenv("RAG_META_PATH")
-RAG_EMBED_MODEL = os.getenv("RAG_EMBED_MODEL")
-RAG_ENABLED = os.getenv("RAG_ENABLED")
-ALLOWED_EXTS = {".pdf", ".txt", ".md"}  # Extensiones soportadas en RAG
+PROMPT_THINKING = config["llm"]["internal_thinking"]
+PROMPT_LANGUAGE = config["llm"]["language_instruct"]
+PROMPT_SYSTEM = config["llm"]["system_prompt"]
 
-WEB_DIR = os.getenv("WEB_DIR")
-LS_API_URL = os.getenv("LANGSEARCH_API_URL")
+DOCS_DIR = "/data/docs"
+RAG_INDEX_PATH = "/data/rag_index.faiss"
+RAG_META_PATH = "/data/rag_meta.jsonl"
+
+WEB_DIR = "/data/web"
+LS_DB_PATH = "/data/langsearch.db"
+LS_API_URL = "https://api.langsearch.com/v1/web-search"
 LS_API_KEY = os.getenv("LANGSEARCH_API_KEY")
-
-LS_DB_PATH = os.getenv("LANGSEARCH_DB_PATH")
 LS_QPS = 1
 LS_QPM = 60
 LS_QPD = 1000
@@ -59,7 +67,7 @@ app.add_middleware(
 
 llm = LLM(
     model=MODEL_DIR,
-    trust_remote_code=TRUST_REMOTE_CODE,
+    trust_remote_code=True,
     dtype=MODEL_DATA_TYPE,
     max_model_len=MODEL_MAX_TOKENS,
     gpu_memory_utilization=MODEL_GPU_MAX_THRESHOLD,
@@ -77,8 +85,7 @@ def _rebuild_index_and_reload():
     indexer.main()
     retriever = RAGRetriever(RAG_INDEX_PATH, RAG_META_PATH, RAG_EMBED_MODEL)
 
-if RAG_ENABLED:
-    _rebuild_index_and_reload()
+_rebuild_index_and_reload()
 
 @app.get("/health")
 def health():
@@ -90,7 +97,7 @@ def chat_completions(req: ChatRequest):
         return {"error": "Campo messages no puede estar vacío"}
 
     # Renderizar prompt desde messages
-    prompt = build_prompt_from_messages(req.messages, _tokenizer, SHOW_INTERNAL_THINKING)
+    prompt = build_prompt_from_messages(req.messages, _tokenizer, SHOW_INTERNAL_THINKING, USE_LANGUAGE_INSTRUCT, PROMPT_THINKING, PROMPT_LANGUAGE, PROMPT_SYSTEM)
 
     # Cargar modelo con parametros especificados
     sampling = build_model_params(req.params, req.max_tokens or 2048)
@@ -125,12 +132,6 @@ async def chat_rag(
     Subir documentos y guadarlos, después reindexar y cargar preguntas en el retriever.
     Acepta un máximo de 10 documentos por llamada a la API.
     """
-    if not RAG_ENABLED:
-        raise HTTPException(
-            status_code=400, 
-            detail="RAG no está activado"
-        )
-
     form = await request.form()
 
     # En caso que venga chat: Leer y convertir a JSON
@@ -255,7 +256,7 @@ async def chat_rag(
             context = build_context(docs)
 
             # Renderizar prompt desde messages
-            prompt = build_prompt_from_messages(chat_req.messages, _tokenizer, SHOW_INTERNAL_THINKING, True, context)
+            prompt = build_prompt_from_messages(chat_req.messages, _tokenizer, SHOW_INTERNAL_THINKING, USE_LANGUAGE_INSTRUCT, PROMPT_THINKING, PROMPT_LANGUAGE, PROMPT_SYSTEM, True, context)
 
             # Cargar modelo con parametros especificados
             sampling = build_model_params(chat_req.params, chat_req.max_tokens)

@@ -4,26 +4,23 @@ from vllm import SamplingParams
 from typing import Optional, Dict
 from server.schemas import Numeric, Message
 
-def build_prompt_from_messages(messages, tokenizer, internal_thinking, using_rag=None, context=None):
+def build_prompt_from_messages(messages, tokenizer, show_internal_thinking, use_language_instruct, prompt_thinking, prompt_language, prompt_system, using_rag=None, context=None):
     """
     Utilizar una chat template del tokenizer especificado, en caso contrario generar un prompt nuevo
     """
     system_instruct = ""
 
-    language_instruct = (
-        "Responde SIEMPRE en el mismo idioma que el usuario usó en su mensaje. "
-        "Si el usuario mezcla idiomas, responde en el idioma predominante. "
-        "Nunca cambies el idioma por tu cuenta."
-    )
+    # Utilizar prompt de lenguage
+    if use_language_instruct:
+        system_instruct += prompt_language
 
-    system_instruct += language_instruct
+    # Utilizar prompt de razonamiento interno
+    if not show_internal_thinking:
+        system_instruct += prompt_thinking
 
     # Reglas del sistema cuando se utiliza RAG
     if using_rag:
         rag_context = (
-            "Eres un asistente con RAG. Usa EXCLUSIVAMENTE el siguiente contexto para responder. "
-            "Si no hay información suficiente en el contexto, responde: "
-            "\"No encontré suficiente información en la base de conocimiento local.\" "
             "REQUISITOS DE CITADO (OBLIGATORIO):\n"
             "- Para documentos locales usa: [doc:{nombre}|chunk:{id}|score:{s}]\n"
             "- Para páginas web usa: [site:{url}|chunk:{id}|score:{s}]\n"
@@ -34,18 +31,10 @@ def build_prompt_from_messages(messages, tokenizer, internal_thinking, using_rag
             f"### CONTEXTO\n{context}\n### FIN CONTEXTO"
         )
 
-        system_instruct += rag_context
-
-    # Switch: Evitar razonamiento interno
-    if not internal_thinking:
-        thinking_instruct = (
-            "Nunca reveles cadenas de pensamiento ni contenido interno como <think>. "
-            "Si necesitas razonar, hazlo internamente y devuelve solo la respuesta final."
-        )
-
-        system_instruct += thinking_instruct
+        system_instruct += prompt_system + rag_context
     
-    messages = [Message(role="system", content=system_instruct)] + messages
+    if system_instruct != "":
+        messages = [Message(role="system", content=system_instruct)] + messages
 
     # Utilizar plantilla de chat del tokenizer en caso de que exista
     try:

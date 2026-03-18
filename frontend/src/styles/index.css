@@ -17,6 +17,7 @@
     --msg-user-bg2: #e6b285;
     --msg-user-bg3: #ceac8e;
     --msg-user-files: #c48650;
+    --msg-user-files-hover: #eca160;
     --msg-user-text: #ffffff;
     --msg-llm-bg: #f0e8dd;
     --msg-llm-text: #3d3229;
@@ -38,6 +39,7 @@
     --msg-user-bg2: #3f3f3f;
     --msg-user-bg3:#4E7BDE;
     --msg-user-files: #232e47;
+    --msg-user-files-hover: #3c4e79;
     --msg-user-text: #ffffff;
     --msg-llm-bg: #4b5563;
     --msg-llm-text: #ffffff;
@@ -299,6 +301,11 @@ body {
     @apply px-2 py-1 w-full border border-1 rounded-md;
 }
 
+#user-settings #grid-options #api-key{
+    border-color: var(--border-color2);
+    @apply px-2 py-1 w-full border border-1 rounded-md;
+}
+
 #user-settings .chips-itm{
     color: var(--text-primary);
     @apply w-full flex items-center gap-2 mt-2;
@@ -314,9 +321,34 @@ body {
 }
 
 #user-settings .chips-itm .chip-add{
+    @apply px-2 py-1 border border-transparent rounded-md;
     color: var(--text-primary);
     background-color: var(--msg-user-files);
+    &:hover {
+        background-color: var(--msg-user-files-hover);
+    }
+}
+
+#user-settings #grid-options .api-key-show-btn{
     @apply px-2 py-1 border border-transparent rounded-md;
+    color: var(--text-primary);
+    background-color: var(--msg-user-files);
+    &:hover {
+        background-color: var(--msg-user-files-hover);
+    }
+}
+
+#user-settings .params-x{
+    @apply self-center text-red-500 hover:text-red-300 ml-2;
+}
+
+#user-settings .params-add{
+    @apply mt-auto ml-auto w-fit px-2 py-1 border border-transparent rounded-md;
+    color: var(--text-primary);
+    background-color: var(--msg-user-files);
+    &:hover {
+        background-color: var(--msg-user-files-hover);
+    }
 }
 
 #user-settings .save-btn{

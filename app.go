@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -19,6 +20,7 @@ import (
 	"chateai/backend/repository"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/joho/godotenv"
 )
 
 // App struct
@@ -32,6 +34,9 @@ type App struct {
 	mu   	 sync.RWMutex
     cfg  	 backend.UserSettings
 	cfgPath  string
+	ft     	 map[string]any
+    ftPath   string
+	scPath	 string
 }
 
 /*
@@ -53,7 +58,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	// Cargar configuración del usuario
-	a.cfgPath = ".settings.toml"
+	a.cfgPath = "settings.toml"
 	if err := ensureDir(filepath.Dir(a.cfgPath)); err != nil {
 		log.Fatal("[!] No se pudo crear el directorio de datos: ", err)
 	}
@@ -65,6 +70,36 @@ func (a *App) startup(ctx context.Context) {
 
 	if err := a.loadUserSettings(); err != nil {
         log.Printf("[!] Error cargando config: %v", err)
+    }
+
+	// Cargar finetuning params
+	a.ftPath = "finetuning.json"
+    if err := ensureDir(filepath.Dir(a.ftPath)); err != nil {
+        log.Fatal("[!] No se pudo crear el directorio de finetuning: ", err)
+    }
+
+	if !fileExists(a.ftPath) {
+        log.Printf("[!] No se encontró archivo de finetuning: %s", a.cfgPath)
+        return
+    }
+
+    if err := a.loadFinetuning(); err != nil {
+        log.Printf("[!] Error cargando archivo de finetuning: %v", err)
+    }
+
+	// Cargar secrets
+	a.scPath = ".secrets"
+    if err := ensureDir(filepath.Dir(a.scPath)); err != nil {
+        log.Fatal("[!] No se pudo crear el directorio de secrets: ", err)
+    }
+
+	if !fileExists(a.scPath) {
+        log.Printf("[!] No se encontró archivo secrets: %s", a.cfgPath)
+        return
+    }
+
+    if err := godotenv.Load(a.scPath); err != nil {
+        log.Printf("[!] Error cargando archivo secrets: %v", err)
     }
 
 	// Cargar BD
@@ -213,46 +248,6 @@ func (a *App) isPathAllowed(abs string) bool {
 	return !strings.HasPrefix(rel, "..")
 }
 
-// Read local files
-func (a *App) ReadLocalFile(path string) (*backend.FilePayload, error) {
-	if path == "" {
-		return nil, errors.New("ruta vacía")
-	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if !a.isPathAllowed(abs) {
-		return nil, errors.New("acceso denegado a la ruta solicitada")
-	}
-	info, err := os.Stat(abs)
-	if err != nil {
-		return nil, err
-	}
-	if info.IsDir() {
-		return nil, errors.New("la ruta es un directorio, no un archivo")
-	}
-
-	b, err := os.ReadFile(abs)
-	if err != nil {
-		return nil, err
-	}
-
-	ext := strings.ToLower(filepath.Ext(abs))
-	m := mime.TypeByExtension(ext)
-	// Fallback genérico
-	if m == "" {
-		m = "application/octet-stream"
-	}
-
-	return &backend.FilePayload{
-		Name:       info.Name(),
-		Mime:       m,
-		DataBase64: base64.StdEncoding.EncodeToString(b),
-	}, nil
-}
-
 /*
 * USER SETTINGS
  */
@@ -373,6 +368,123 @@ func (a *App) saveUserSettings(c backend.UserSettings) error {
 }
 
 /*
+* FINETUNING PARAMS
+ */
+func jsonCopyMap(src map[string]any) map[string]any {
+    if src == nil {
+        return nil
+    }
+
+    b, _ := json.Marshal(src)
+    var dst map[string]any
+    _ = json.Unmarshal(b, &dst)
+
+    return dst
+}
+
+func (a *App) loadFinetuning() error {
+    a.mu.Lock()
+    defer a.mu.Unlock()
+
+    b, err := os.ReadFile(a.ftPath)
+    if err != nil {
+        return err
+    }
+
+    var cfg map[string]any
+    if err := json.Unmarshal(b, &cfg); err != nil {
+        return err
+    }
+
+    a.ft = cfg
+    return nil
+}
+
+func (a *App) saveFinetuning(snapshot map[string]any) error {
+    b, err := json.MarshalIndent(snapshot, "", "  ")
+    if err != nil {
+        return err
+    }
+	// Establecer tamaño máximo
+    if len(b) > 1_000_000 {
+        return fmt.Errorf("[!] SaveFinetuning: finetuning.json demasiado grande (%d bytes)", len(b))
+    }
+
+    if err := ensureDir(filepath.Dir(a.ftPath)); err != nil {
+        return err
+    }
+
+    tmp := a.ftPath + ".tmp"
+    if err := os.WriteFile(tmp, b, 0o600); err != nil {
+        return err
+    }
+    _ = os.Rename(a.ftPath, a.ftPath+".bak")
+    return os.Rename(tmp, a.ftPath)
+}
+
+/*
+* SECRETS
+ */
+var (
+    allowedSecretKeys = map[string]bool{
+        "LANGSEARCH_API_KEY": true,
+    }
+)
+
+func (a *App) readSecretsMap() (map[string]string, error) {
+    if !fileExists(a.scPath) {
+        return map[string]string{}, nil
+    }
+    m, err := godotenv.Read(a.scPath)
+    if err != nil {
+        return nil, err
+    }
+    return m, nil
+}
+
+func (a *App) writeSecretsMap(m map[string]string) error {
+	// Asegurar directorio y permisos de escritura
+	if err := ensureDir(filepath.Dir(a.scPath)); err != nil {
+        return err
+    }
+	
+	// Escribir en el archivo .secrets
+	if err := godotenv.Write(m, a.scPath); err != nil {
+        return fmt.Errorf("escribiendo .secrets: %w", err)
+    }
+
+    // Actualizar variables del proceso
+    if err := godotenv.Overload(a.scPath); err != nil {
+        return fmt.Errorf("refrescando entorno: %w", err)
+    }
+    return nil
+}
+
+func (a *App) UpdateSecrets(key, value string) error {
+    key = strings.TrimSpace(key)
+    value = strings.TrimSpace(value)
+
+    if !allowedSecretKeys[key] {
+        return fmt.Errorf("clave no permitida")
+    }
+
+    a.mu.Lock()
+    defer a.mu.Unlock()
+
+    kv, err := a.readSecretsMap()
+    if err != nil {
+        return err
+    }
+    kv[key] = value
+
+    if err := a.writeSecretsMap(kv); err != nil {
+        return err
+    }
+
+    return nil
+}
+
+/*
 * FRONT EXPOSE
  */
 func (a *App) GetDocsDir() (string, error) {
@@ -410,6 +522,83 @@ func (a *App) ApplyNewUserSettings(patch backend.UserSettingsPatch) (backend.Use
     }
 
     return snapshot, nil
+}
+
+func (a *App) ReadLocalFile(path string) (*backend.FilePayload, error) {
+	if path == "" {
+		return nil, errors.New("[!] ReadLocalFile: ruta proporcionada está vacía")
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !a.isPathAllowed(abs) {
+		return nil, errors.New("[!] ReadLocalFile: acceso denegado a la ruta solicitada")
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() {
+		return nil, errors.New("[!] ReadLocalFile: la ruta es un directorio, no un archivo")
+	}
+
+	b, err := os.ReadFile(abs)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := strings.ToLower(filepath.Ext(abs))
+	m := mime.TypeByExtension(ext)
+	if m == "" {
+		m = "application/octet-stream"
+	}
+
+	return &backend.FilePayload{
+		Name:       info.Name(),
+		Mime:       m,
+		DataBase64: base64.StdEncoding.EncodeToString(b),
+	}, nil
+}
+
+func (a *App) GetFinetuning() (map[string]any, error) {
+    a.mu.RLock()
+    defer a.mu.RUnlock()
+
+    // Si no hay información cargada en memoria, devuelve error
+    if a.ft == nil {
+        return map[string]any{}, nil
+    }
+    return jsonCopyMap(a.ft), nil
+}
+
+func (a *App) SaveFinetuning(newCfg map[string]any) (map[string]any, error) {
+    if newCfg == nil {
+        return nil, errors.New("[!] SaveFinetuning: Nueva configuración no puede ser nula")
+    }
+
+    // Guardar cambios en memoria
+    a.mu.Lock()
+    a.ft = jsonCopyMap(newCfg)
+    snapshot := jsonCopyMap(a.ft)
+    a.mu.Unlock()
+
+    if err := a.saveFinetuning(snapshot); err != nil {
+        return nil, err
+    }
+    return snapshot, nil
+}
+
+func (a *App) GetLangsearchAPIKey() (string, error) {
+    return os.Getenv("LANGSEARCH_API_KEY"), nil
+}
+
+func (a *App) UpdateLangsearchAPIKey(newValue string) (bool, error) {
+	if err := a.UpdateSecrets("LANGSEARCH_API_KEY", newValue); err != nil {
+        return false, err
+    }
+    return true, nil
 }
 
 /*

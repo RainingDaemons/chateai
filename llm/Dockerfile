@@ -15,11 +15,9 @@ RUN python3 -m pip install "numpy<2"
 RUN python3 -m pip install --no-cache-dir "faiss-cpu"
 RUN python3 -m pip install "vllm==0.13.0" 
 RUN python3 -m pip install "fastapi[standard]" "pydantic" "transformers" "accelerate" "safetensors" \
-    "sentence-transformers>=3.0.0" "pypdf>=4.0.0" \
+    "sentence-transformers>=3.0.0" "pypdf>=4.0.0" "tomli" \
     "torch-c-dlpack-ext" "tf-keras"
-RUN mkdir -p /models
-RUN mkdir -p /data
-VOLUME ["/models"]
-VOLUME ["/data"]
+RUN mkdir -p /models /data /app
+VOLUME ["/models", "/data"]
 WORKDIR /app
-CMD ["fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["fastapi", "run", "llm/main.py", "--host", "0.0.0.0", "--port", "8000"]

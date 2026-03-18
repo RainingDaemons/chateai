@@ -11,19 +11,4 @@ const fetchWithTimeout = async (url, timeout_secs, options = {}) => {
     }
 };
 
-const getLlmParams = () => {
-    const llmName = import.meta.env.VITE_LLM_NAME;
-
-    switch (llmName) {
-        case "LIQUIDAI_LFM2":
-            return {
-                "temperature": 0.3,
-                "min_p": 0.15,
-                "repetition_penalty": 1.05
-            }
-        default:
-            console.log(`Error: No está registrado ${llmName ?? 'null'}`);
-    }
-};
-
-export { fetchWithTimeout, getLlmParams };
+export { fetchWithTimeout };

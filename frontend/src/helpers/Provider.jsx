@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'solid-js';
 import { createSignal, createEffect, onMount } from 'solid-js';
-import { DBGetAllConversations, DBGetAllMessages, GetDocsDir, GetUserSettings } from "../../wailsjs/go/main/App";
+import { DBGetAllConversations, DBGetAllMessages, GetDocsDir, GetFinetuning, GetLangsearchAPIKey, GetUserSettings } from "../../wailsjs/go/main/App";
 
 import { fetchWithTimeout } from '../helpers/Utils';
 
@@ -43,6 +43,8 @@ const Provider = (props) => {
     const [docsDir, setDocsDir] = createSignal(null);
     const [lsConsumption, setLsConsumption] = createSignal(0);
     const [userSettings, setUserSettings] = createSignal([]);
+    const [llmParams, setLlmParams] = createSignal(null);
+    const [apiKey, setApiKey] = createSignal(null);
 
     // Función para alternar tema
     const toggleTheme = () => {
@@ -128,8 +130,28 @@ const Provider = (props) => {
             const settings = await GetUserSettings();
             setUserSettings(settings ?? []);
         } catch (e) {
-            console.log("Error: No se ha podido obtener el listado de mensajes");
+            console.log("Error: No se ha podido obtener la configuración del usuario");
             setUserSettings([]);
+        }
+    }
+
+    const loadFinetuningParams = async () => {
+        try {
+            const params = await GetFinetuning();
+            setLlmParams(params ?? null);
+        } catch (e) {
+            console.log("Error: No se ha podido obtener los finetuning params");
+            setLlmParams(null);
+        }
+    }
+
+    const loadAPIKeys = async () => {
+        try {
+            const key = await GetLangsearchAPIKey();
+            setApiKey(key ?? null);
+        } catch (e) {
+            console.log("Error: No se ha podido obtener los finetuning params");
+            setApiKey(null);
         }
     }
 
@@ -145,6 +167,8 @@ const Provider = (props) => {
             const path = await GetDocsDir();
             setDocsDir(path);
             await loadUserSettings();
+            await loadFinetuningParams();
+            await loadAPIKeys();
         } catch (e) {
             console.error('No se pudo obtener docsDir:', e);
             setDocsDir(null);
@@ -175,7 +199,7 @@ const Provider = (props) => {
         netEnabled, setNetEnabled,
         docsDir, setDocsDir,
         lsConsumption, updateLSCount,
-        userSettings, setUserSettings
+        userSettings, llmParams, apiKey
     };
 
     return (

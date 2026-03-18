@@ -1,7 +1,6 @@
 import { createSignal, createMemo, Show, For } from "solid-js";
 
 import { DBCreateConversation, DBCreateMessage } from "../../wailsjs/go/main/App";
-import { getLlmParams } from '../helpers/Utils';
 import { useProv } from "../helpers/Provider";
 import { SettingsMenu, ApiConsumptionBar } from '../ui/Components';
 
@@ -18,7 +17,7 @@ const MessageBar = () => {
     const visibleFiles = createMemo(() => files().slice(0, MAX_VISIBLE));
     const hiddenFiles = createMemo(() => files().slice(MAX_VISIBLE));
     const hiddenCount = createMemo(() => Math.max(0, files().length - MAX_VISIBLE));
-    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs, ragEnabled, setRagEnabled, netEnabled, setNetEnabled, lsConsumption, incLsOptimistic, updateLSCount } = useProv();
+    const { convID, setConvID, chat, setChat, updateConvs, updateMsgs, ragEnabled, setRagEnabled, netEnabled, setNetEnabled, lsConsumption, updateLSCount, llmParams } = useProv();
 
     // Texto y estados
     const formatText = (text) => {
@@ -105,7 +104,7 @@ const MessageBar = () => {
 
         setIsLoading(true);
         try {
-            const llmParams = getLlmParams();
+            const params = llmParams();
 
             // Subida de archivos y busqueda web utilizan mismo endpoint
             let apiRes;
@@ -115,7 +114,7 @@ const MessageBar = () => {
                 // El campo "chat" es un json que contiene el mensaje y params
                 const chatObj = {
                     messages: [userMessage],
-                    params: llmParams,
+                    params: params,
                 };
                 form.append("chat", JSON.stringify(chatObj));
                 form.append("sync", "true");
@@ -137,7 +136,7 @@ const MessageBar = () => {
                 // Si no es RAG, enviar como JSON normal
                 const payload = {
                     messages: [userMessage],
-                    params: llmParams,
+                    params: params,
                 };
 
                 apiRes = await fetch(apiUrl, {

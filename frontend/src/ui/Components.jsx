@@ -5,7 +5,7 @@ import { Progress } from "@kobalte/core/progress";
 import { Toast, toaster } from "@kobalte/core";
 import { createSignal, createMemo, createEffect, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { ApplyNewUserSettings } from "../../wailsjs/go/main/App";
+import { ApplyNewUserSettings, SaveFinetuning, UpdateLangsearchAPIKey } from "../../wailsjs/go/main/App";
 
 import pkg from "../../package.json";
 import { useProv } from "../helpers/Provider";
@@ -341,7 +341,7 @@ const CreditsModal = (props) => {
                             class="p-6 space-y-3"
                             id="credits-body"
                         >
-                            <div class="flex gap-1">
+                            <div class="flex gajsonCopyMapp-1">
                                 <span>Aplicación desarrollada por</span>
                                 <a
                                     href="https://github.com/RainingDaemons"
@@ -377,76 +377,45 @@ const CreditsModal = (props) => {
 };
 
 const UserSettingsModal = (props) => {
-    const { userSettings, setUserSettings } = useProv();
+    const { userSettings, llmParams, apiKey } = useProv();
     const [newSettings, setNewSettings] = createSignal([]);
     const [originalSettings, setOriginalSettings] = createSignal([]);
+    const [newLlmParams, setNewLlmParams] = createSignal([]);
+    const [originalLlmParams, setOriginalLlmParams] = createSignal([]);
+    const [newApiKey, setNewApiKey] = createSignal([]);
+    const [showApiKey, setShowApiKey] = createSignal(false);
+    const [originalApiKey, setOriginalApiKey] = createSignal([]);
     const [currentMenu, setCurrentMenu] = createSignal("general");
     const [unsavedChanges, setUnsavedChanges] = createSignal(false);
+    const [unsavedFiles, setUnsavedFiles] = createSignal([]);
 
     /*
-    * Extensiones
+    * Utils
     */
-    function normalizeExt(input) {
-        let s = String(input || "").trim().toLowerCase();
-        if (!s) return "";
-        if (s.startsWith(".")) return s;
-        return "." + s;
+    function detectType(value) {
+        if (typeof value === "boolean") return "boolean";
+        if (typeof value === "number") return "number";
+        return "string";
     }
 
-    function isValidExt(ext) {
-        return /^\.[a-z0-9]{1,10}$/.test(ext);
-    }
+    function autoCast(valueStr) {
+        const v = valueStr.trim();
 
-    function getExts() {
-        return Array.isArray(newSettings().server.allowed_exts)
-            ? newSettings().server.allowed_exts
-            : [];
-    }
-
-    function setExts(next) {
-        setNewSettings(prev => ({
-            ...prev,
-            server: {
-                ...prev.server,
-                allowed_exts: next
-            }
-        }));
-    }
-
-    function addExt(raw) {
-        const current = getExts();
-        if (current.length >= 10) return; // límite máximo
-
-        const ext = normalizeExt(raw);
-        if (!ext || !isValidExt(ext)) return; // invalido
-
-        // Evita duplicados
-        const exists = current.some(e => e.toLowerCase() === ext.toLowerCase());
-        if (exists) return;
-
-        setExts([...current, ext]);
-    }
-
-    function removeExt(index) {
-        const current = getExts();
-        const next = current.filter((_, i) => i !== index);
-        setExts(next);
-    }
-
-    // Maneja agregar una nueva extensión
-    function handleChipAdd() {
-        if (getExts().length >= 10) {
-            alert("Error: se pueden agregar 10 extensiones como máximo");
-            return;
+        // Boolean
+        if (/^(true|false)$/i.test(v)) {
+            return v.toLowerCase() === "true";
         }
-        const input = prompt('Introduce nueva extensión (sin punto): ');
-        if (input == null) return;
-        addExt(input);
+
+        // Numeros
+        if (v !== "") {
+            const n = Number(v);
+            if (Number.isFinite(n)) return n;
+        }
+
+        // Alt: String
+        return valueStr;
     }
 
-    /*
-    * Acciones
-    */
     function checkValuesEquality(a, b) {
         // Check if one is null
         if (typeof a !== typeof b) return false;
@@ -454,7 +423,7 @@ const UserSettingsModal = (props) => {
 
         // Compare numbers or bool
         if ((typeof a === typeof b) && (typeof a === "number") && isNaN(a) && isNaN(b)) return true;
-        if ((typeof a === typeof b) && (typeof a === "bool") && isNaN(a) && isNaN(b)) return true;
+        if ((typeof a === typeof b) && (typeof a === "boolean") && isNaN(a) && isNaN(b)) return true;
         
         // Compare strings
         if ((typeof a === typeof b) && (typeof a === "string") && (a.localeCompare(b) === 0)) return true;
@@ -497,9 +466,160 @@ const UserSettingsModal = (props) => {
         return !checkValuesEquality(o, e);
     }
 
+    /*
+    * Extensiones
+    */
+    function normalizeExt(input) {
+        let s = String(input || "").trim().toLowerCase();
+        if (!s) return "";
+        if (s.startsWith(".")) return s;
+        return "." + s;
+    }
+
+    function isValidExt(ext) {
+        return /^\.[a-z0-9]{1,10}$/.test(ext);
+    }
+
+    function getExts() {
+        return Array.isArray(newSettings().server.allowed_exts)
+            ? newSettings().server.allowed_exts
+            : [];
+    }
+
+    function setExts(next) {
+        setNewSettings(prev => ({
+            ...prev,
+            server: {
+                ...prev.server,
+                allowed_exts: next
+            }
+        }));
+    }
+
+    function addExt(raw) {
+        const MAX = 10;
+        const current = getExts();
+        if (current.length >= MAX) return; // límite máximo
+
+        // Validaciones
+        const ext = normalizeExt(raw);
+        if (!ext || !isValidExt(ext)) return;
+
+        // Evita duplicados
+        const exists = current.some(e => e.toLowerCase() === ext.toLowerCase());
+        if (exists) return;
+
+        setExts([...current, ext]);
+        setUnsavedChanges(true);
+        handleUnsavedFiles("settings", "add");
+    }
+
+    function removeExt(index) {
+        const current = getExts();
+        const next = current.filter((_, i) => i !== index);
+        setExts(next);
+        setUnsavedChanges(true);
+        handleUnsavedFiles("settings", "add");
+    }
+
+    // Maneja agregar una nueva extensión
+    const handleChipAdd = () => {
+        if (getExts().length >= 10) {
+            alert("Error: se pueden agregar 10 extensiones como máximo");
+            return;
+        }
+        const input = prompt('Introduce nueva extensión (sin punto): ');
+        if (input == null) return;
+        addExt(input);
+    }
+
+    /*
+    * Params
+    */
+    function addParam(key, value) {
+        const MAX = 10;
+        const current = newLlmParams();
+        
+        // Validaciones
+        const k = String(key ?? "").trim();
+        if (!k) return;
+        if (typeof current !== "object" || Array.isArray(current)) return;
+
+        // Límite máximo de atributos
+        if (Object.keys(current).length >= MAX) return;
+
+        // Evitar duplicados
+        const existingKey = Object.keys(current).find(
+            (ck) => ck.toLowerCase() === k.toLowerCase()
+        );
+        if (existingKey){
+            alert("Error: param introducido ya existe")
+            return
+        };
+
+        // Convertir tipos
+        value = autoCast(value);
+
+        setNewLlmParams({...current, [k]: value});
+        setUnsavedChanges(true);
+        handleUnsavedFiles("finetuning", "add");
+    }
+
+    function removeParam(index) {
+        const current = newLlmParams();
+        const entries = Object.entries(current);
+
+        const nextEntries = entries.filter((_, i) => i !== index);
+        const next = Object.fromEntries(nextEntries);
+
+        setNewLlmParams(next);
+        setUnsavedChanges(true);
+        handleUnsavedFiles("finetuning", "add");
+    }
+
+    // Maneja agregar una nueva extensión
+    const handleParamAdd = () => {
+        if (Object.keys(newLlmParams()).length >= 10) {
+            alert("Error: se pueden agregar 10 params como máximo");
+            return;
+        }
+
+        const input = prompt("Introduce key y value separados por ':' (Ej: min_p:0.2): ");
+        if (input == null) return;
+
+        // Parsear valores
+        const [rawKey, ...rest] = input.split(":");
+        const key = (rawKey || "").trim();
+        const value = (rest.join(":") || "").trim();
+
+        if (!key || !value) {
+            alert("Formato inválido, usa: key:value");
+            return;
+        }
+
+        addParam(key, value);
+    }
+
+    /*
+    * Acciones
+    */
+    function handleUnsavedFiles(x, action) {
+        setUnsavedFiles((prev) => {
+            const exists = prev.includes(x);
+            if (action === "add" && !exists) {
+                return [...prev, x];
+            }
+            if (action === "del" && exists) {
+                return prev.filter((it) => it !== x);
+            }
+            return prev;
+        });
+    }
+
     const handleChange = (e, key) => {
         const input = e.currentTarget;
         const menu = currentMenu();
+        const original = originalSettings();
         
         // Procesar valores dependiendo del input
         let value;
@@ -521,22 +641,105 @@ const UserSettingsModal = (props) => {
             };
 
             // Compara solo la rama afectada
-            const changedInPath = comparePath(originalSettings(), next, [menu, key]);
+            const changedInPath = comparePath(original, next, [menu, key]);
 
             if (changedInPath) {
                 setUnsavedChanges(true);
+                handleUnsavedFiles("settings", "add");
             } else {
-                setUnsavedChanges(!checkValuesEquality(originalSettings(), next));
+                const check = !checkValuesEquality(original, next);
+                setUnsavedChanges();
+                if (check == true) {
+                    handleUnsavedFiles("settings", "add");
+                } else {
+                    handleUnsavedFiles("settings", "del");
+                }
             }
 
             return next;
         });
     }
 
+    const handleApiKeyChange = (e) => {
+        const next = e.currentTarget.value;
+        setNewApiKey(next);
+
+        const changed = !checkValuesEquality(originalApiKey(), next);
+        setUnsavedChanges(changed);
+
+        if (changed) {
+            handleUnsavedFiles("secrets", "add");
+        } else {
+            handleUnsavedFiles("secrets", "del");
+        }
+    };
+
+    const handleParamsChange = (key, index) => {
+        const params = newLlmParams();
+        if (!params) return;
+
+        const original = originalLlmParams();
+        const current = params[key];
+        let next = index;
+
+        if (typeof current === "number") {
+            const parsed = Number(index);
+            next = Number.isFinite(parsed) ? parsed : 0;
+        } else if (typeof current === "boolean") {
+            next = Boolean(index);
+        } else if (typeof prev === "string") {
+            next = String(rawValue);
+        }
+
+        setNewLlmParams((prev) => {
+            const base = prev ?? {};
+            const next2 = { ...base, [key]: next };
+
+            // Compara solo la clave cambiada contra el original
+            const changedInKey = !checkValuesEquality(original[key], next2[key]);
+
+            if (changedInKey) {
+                setUnsavedChanges(true);
+                handleUnsavedFiles("finetuning", "add");
+            } else {
+                const check = !checkValuesEquality(original, next2)
+                setUnsavedChanges(check);
+                if (check == true) {
+                    handleUnsavedFiles("finetuning", "add");
+                } else {
+                    handleUnsavedFiles("finetuning", "del");
+                }
+            }
+
+            return next2;
+        });
+    };
+
     const handleSaveChanges = async () => {
-        // Guardar cambios
         try {
-            await ApplyNewUserSettings(newSettings());
+            const files = unsavedFiles();
+            let us = null;
+            let ft = null;
+            let sc = null;
+
+            if (files.includes("settings")) {
+                us = await ApplyNewUserSettings(newSettings());
+                setOriginalSettings(newSettings());
+            }
+            if (files.includes("finetuning")) {
+                ft = await SaveFinetuning(newLlmParams());
+                setOriginalLlmParams(newLlmParams());
+            }
+            if (files.includes("secrets")) {
+                sc = await UpdateLangsearchAPIKey(newApiKey());
+                setOriginalApiKey(newApiKey());
+            }
+
+            if (us || ft || sc){
+                alert("Cambios aplicados correctamente");
+                setUnsavedChanges(false);
+                setUnsavedFiles([]);
+            }
         } catch (e) {
             alert("Error: No se ha podido actualizar la nueva configuración del usuario");
             console.log(e);
@@ -547,9 +750,25 @@ const UserSettingsModal = (props) => {
         if (userSettings().length != 0) {
             setNewSettings(userSettings());
             setOriginalSettings(userSettings());
-            console.log(userSettings());
+            //console.log(userSettings());
         }
     }, userSettings);
+
+    createEffect(() => {
+        if (llmParams()) {
+            setNewLlmParams(llmParams());
+            setOriginalLlmParams(llmParams());
+            //console.log(llmParams());
+        }
+    }, llmParams);
+
+    createEffect(() => {
+        if (apiKey()) {
+            setNewApiKey(apiKey());
+            setOriginalApiKey(apiKey());
+            //console.log(apiKey());
+        }
+    }, apiKey);
 
     return (
         <Dialog open={props.open} onOpenChange={props.onOpenChange}>
@@ -608,6 +827,24 @@ const UserSettingsModal = (props) => {
                                         }}
                                     >
                                         <span>LLM</span>
+                                    </div>
+                                    <div
+                                        onClick={() => setCurrentMenu("finetuning")}
+                                        class="button-itm"
+                                        classList={{
+                                            "active": currentMenu() === "finetuning"
+                                        }}
+                                    >
+                                        <span>Finetuning Params</span>
+                                    </div>
+                                    <div
+                                        onClick={() => setCurrentMenu("api")}
+                                        class="button-itm"
+                                        classList={{
+                                            "active": currentMenu() === "api"
+                                        }}
+                                    >
+                                        <span>API Keys</span>
                                     </div>
                                     <Show when={unsavedChanges()}>
                                         <div
@@ -729,6 +966,75 @@ const UserSettingsModal = (props) => {
                                                     value={newSettings().llm.system_prompt}
                                                     onInput={(e) => handleChange(e, "system_prompt")}
                                                 />
+                                            </div>
+                                        </Show>
+                                        <Show when={currentMenu() == "finetuning"}>
+                                            <div class="w-full h-full flex flex-col">
+                                                <div
+                                                    className="grid [grid-template-columns:220px_1fr] gap-x-4 gap-y-3 items-start sm:[grid-template-columns:220px_1fr_auto] max-sm:grid-cols-2" 
+                                                    id="grid-options"
+                                                >
+                                                    <For each={Object.entries(newLlmParams())}>
+                                                        {([key, value], idx) => {
+                                                            const type = detectType(value);
+
+                                                            return (
+                                                                <>
+                                                                    <label>{key}</label>
+                                                                    {type === "number" && (
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.1"
+                                                                            value={value}
+                                                                            onChange={(e) => handleParamsChange(key, e.target.value)}
+                                                                        />
+                                                                    )}
+                                                                    {type === "boolean" && (
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={value}
+                                                                            onChange={(e) => handleParamsChange(key, e.target.checked)}
+                                                                        />
+                                                                    )}
+                                                                    {type === "string" && (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={value}
+                                                                            onChange={(e) => handleParamsChange(key, e.target.value)}
+                                                                        />
+                                                                    )}
+                                                                    <button class="params-x" onClick={() => removeParam(idx())}>x</button>
+                                                                </>
+                                                            );
+                                                        }}
+                                                    </For>
+                                                </div>
+                                                <button class="params-add" onClick={() => handleParamAdd()}>Agregar params</button>
+                                            </div>
+                                        </Show>
+                                        <Show when={currentMenu() == "api"}>
+                                            <div
+                                                class="grid gap-x-4 gap-y-3 items-center [grid-template-columns:160px_1fr_auto] sm:[grid-template-columns:160px_1fr_auto]"
+                                                id="grid-options"
+                                            >
+                                                <label>Langsearch API Key</label>
+                                                <input
+                                                    id="api-key"
+                                                    type={showApiKey() ? "text" : "password"}
+                                                    value={newApiKey()}
+                                                    onInput={handleApiKeyChange}
+                                                    autocomplete="off"
+                                                    spellcheck={false}
+                                                />
+                                                <button
+                                                    class="api-key-show-btn"
+                                                    type="button"
+                                                    onClick={() => setShowApiKey((v) => !v)}
+                                                    aria-pressed={showApiKey()}
+                                                    aria-label={showApiKey() ? "Ocultar API Key" : "Mostrar API Key"}
+                                                >
+                                                    {showApiKey() ? "Ocultar" : "Mostrar"}
+                                                </button>
                                             </div>
                                         </Show>
                                     </>

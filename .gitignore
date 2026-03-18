@@ -6,7 +6,7 @@ build/**
 !build/**/*.gif
 models/**
 data/**
-.env
+.secrets
 .pyc
 *.bak
 __pycache__

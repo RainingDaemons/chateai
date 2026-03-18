@@ -3,6 +3,7 @@ module chateai
 go 1.25
 
 require (
+	github.com/joho/godotenv v1.5.1
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/wailsapp/wails/v2 v2.11.0
 	modernc.org/sqlite v1.44.0
